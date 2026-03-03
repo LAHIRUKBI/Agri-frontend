@@ -386,10 +386,6 @@ export default function SignIn() {
             </>
           ) : (
             <>
-              New admin?{' '}
-              <Link href="/admin/register" className="font-medium text-green-600 hover:text-green-700 transition duration-200">
-                Register as Admin
-              </Link>
             </>
           )}
         </div>
