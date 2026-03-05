@@ -222,7 +222,7 @@ export default function SignIn() {
         }
         
         // Redirect farmer
-        router.push('/dashboard/rotation-plan');
+        router.push('/dashboard/farmer/home');
       }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');
