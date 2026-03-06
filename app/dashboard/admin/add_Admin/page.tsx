@@ -109,145 +109,159 @@ export default function AdminRegistrationPage() {
 
             {/* Main Content */}
             <main className="flex-1 bg-white overflow-auto">
-                <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-                        <div className="px-6 py-8">
-                            <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-8">
-                                Admin Register
-                            </h2>
-                            
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Name Input */}
-                                <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Full Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="name"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        required
-                                        className="text-black black w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter full name"
-                                        disabled={loading}
-                                    />
-                                </div>
-
-                                {/* Email Input */}
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Email Address
-                                    </label>
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        required
-                                        className="text-black w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter email address"
-                                        disabled={loading}
-                                    />
-                                </div>
-
-                                {/* Phone Number Input */}
-                                <div>
-                                    <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Phone Number
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        id="phoneNumber"
-                                        name="phoneNumber"
-                                        value={formData.phoneNumber}
-                                        onChange={handleChange}
-                                        required
-                                        className="text-black w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter phone number"
-                                        disabled={loading}
-                                    />
-                                </div>
-
-                                {/* Password Input */}
-                                <div>
-                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Password
-                                    </label>
-                                    <div className="relative">
+                <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-md mx-auto">
+                        {/* Header */}
+                        <div className="mb-8">
+                            <h1 className="text-2xl font-semibold text-gray-900">
+                                Register Administrator
+                            </h1>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Create a new administrator account
+                            </p>
+                        </div>
+                        
+                        {/* Form Card */}
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="px-6 py-8">
+                                <form onSubmit={handleSubmit} className="space-y-5">
+                                    {/* Name Input */}
+                                    <div>
+                                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Full Name
+                                        </label>
                                         <input
-                                            type={showPassword ? "text" : "password"}
-                                            id="password"
-                                            name="password"
-                                            value={formData.password}
+                                            type="text"
+                                            id="name"
+                                            name="name"
+                                            value={formData.name}
                                             onChange={handleChange}
                                             required
-                                            minLength={6}
-                                            className="text-black w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Enter password (min. 6 characters)"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 text-sm"
+                                            placeholder="John Doe"
                                             disabled={loading}
                                         />
+                                    </div>
+
+                                    {/* Email Input */}
+                                    <div>
+                                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Email Address
+                                        </label>
+                                        <input
+                                            type="email"
+                                            id="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            required
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 text-sm"
+                                            placeholder="john@example.com"
+                                            disabled={loading}
+                                        />
+                                    </div>
+
+                                    {/* Phone Number Input */}
+                                    <div>
+                                        <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Phone Number
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            id="phoneNumber"
+                                            name="phoneNumber"
+                                            value={formData.phoneNumber}
+                                            onChange={handleChange}
+                                            required
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 text-sm"
+                                            placeholder="+1 234 567 8900"
+                                            disabled={loading}
+                                        />
+                                    </div>
+
+                                    {/* Password Input */}
+                                    <div>
+                                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Password
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                id="password"
+                                                name="password"
+                                                value={formData.password}
+                                                onChange={handleChange}
+                                                required
+                                                minLength={6}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 text-sm"
+                                                placeholder="••••••••"
+                                                disabled={loading}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                            >
+                                                {showPassword ? (
+                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <p className="mt-1.5 text-xs text-gray-500">
+                                            Minimum 6 characters
+                                        </p>
+                                    </div>
+
+                                    {/* Message Display */}
+                                    {message.text && (
+                                        <div className={`p-3 rounded-lg ${
+                                            message.type === 'success' 
+                                                ? 'bg-green-50 text-green-700 border border-green-200' 
+                                                : 'bg-red-50 text-red-700 border border-red-200'
+                                        }`}>
+                                            <p className="text-sm">{message.text}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Submit Button */}
+                                    <div className="pt-2">
                                         <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                                            type="submit"
+                                            disabled={loading}
+                                            className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white 
+                                                ${loading 
+                                                    ? 'bg-blue-400 cursor-not-allowed' 
+                                                    : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                                                }`}
                                         >
-                                            {showPassword ? (
-                                                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
+                                            {loading ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Registering...
+                                                </>
                                             ) : (
-                                                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                                </svg>
+                                                'Register Administrator'
                                             )}
                                         </button>
                                     </div>
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        Password must be at least 6 characters long
-                                    </p>
-                                </div>
-
-                                {/* Message Display */}
-                                {message.text && (
-                                    <div className={`p-3 rounded-md ${
-                                        message.type === 'success' 
-                                            ? 'bg-green-100 text-green-700 border border-green-400' 
-                                            : 'bg-red-100 text-red-700 border border-red-400'
-                                    }`}>
-                                        {message.text}
-                                    </div>
-                                )}
-
-                                {/* Submit Button */}
-                                <div>
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
-                                            ${loading 
-                                                ? 'bg-blue-400 cursor-not-allowed' 
-                                                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                                            }`}
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Registering...
-                                            </>
-                                        ) : (
-                                            'Add Admin'
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </div>
+
+                        {/* Footer Note */}
+                        <p className="text-xs text-gray-400 text-center mt-4">
+                            This will create a new administrator with full system access
+                        </p>
                     </div>
                 </div>
             </main>
