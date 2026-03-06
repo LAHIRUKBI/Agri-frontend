@@ -164,11 +164,11 @@ export default function RotationPlansPage() {
   const getSuitabilityBadge = (isSuitable: boolean) => {
     return isSuitable ? (
       <span className="px-2 py-1 text-[10px] font-bold bg-green-100 text-green-700 rounded-full border border-green-200">
-        ✓ Suitable
+        Suitable
       </span>
     ) : (
       <span className="px-2 py-1 text-[10px] font-bold bg-red-100 text-red-700 rounded-full border border-red-200">
-        ✗ Not Recommended
+        Not Recommended
       </span>
     );
   };
@@ -227,17 +227,9 @@ export default function RotationPlansPage() {
                   placeholder="Search by crop name or date..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm"
+                  className="text-black w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm"
                 />
               </div>
-              <select
-                value={selectedSort}
-                onChange={(e) => setSelectedSort(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm bg-white min-w-[140px]"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-              </select>
             </div>
           </div>
 
@@ -383,7 +375,7 @@ export default function RotationPlansPage() {
 
           {/* Detail Modal */}
           {isModalOpen && selectedPlan && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
               <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-gray-800">Rotation Plan Details</h2>
@@ -469,8 +461,8 @@ export default function RotationPlansPage() {
                           <tbody className="divide-y divide-gray-100">
                             {selectedPlan.soilNutrientLevels.map((item, idx) => (
                               <tr key={idx}>
-                                <td className="px-4 py-2 font-medium">{item.nutrient}</td>
-                                <td className="px-4 py-2">{item.level}</td>
+                                <td className="px-4 py-2 font-medium text-black">{item.nutrient}</td>
+                                <td className="px-4 py-2 text-black">{item.level}</td>
                                 <td className="px-4 py-2 text-gray-600">{item.depletionPrediction}</td>
                               </tr>
                             ))}
@@ -495,8 +487,8 @@ export default function RotationPlansPage() {
                           <tbody className="divide-y divide-gray-100">
                             {selectedPlan.requiredNutrients.map((item, idx) => (
                               <tr key={idx}>
-                                <td className="px-4 py-2 font-medium">{item.nutrient}</td>
-                                <td className="px-4 py-2">{item.amount}</td>
+                                <td className="px-4 py-2 font-medium text-black">{item.nutrient}</td>
+                                <td className="px-4 py-2 text-black">{item.amount}</td>
                                 <td className="px-4 py-2 text-gray-600">{item.recommendedSource}</td>
                               </tr>
                             ))}
