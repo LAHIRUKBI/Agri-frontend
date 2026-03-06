@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@react-google-maps/api": "^2.20.8",
     "axios": "^1.13.6",
     "firebase": "^12.10.0",
     "next": "16.1.6",
