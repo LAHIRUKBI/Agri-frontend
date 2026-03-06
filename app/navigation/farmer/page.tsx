@@ -1,7 +1,7 @@
 // app/navigation/farmer.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -23,6 +23,25 @@ interface FarmerSidebarProps {
 
 export default function FarmerSidebar({ user }: FarmerSidebarProps) {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if mobile view on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const navItems: NavItem[] = [
     {
@@ -57,7 +76,7 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
       path: '/dashboard/farmer/soil-health',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       )
     },
@@ -102,19 +121,154 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
 
   // Get display info from user object
   const displayName = user?.name || 'Farmer';
-  const displayEmail = user?.email || 'No email provided';
-  const displayPhone = user?.phoneNumber || 'No phone provided';
   const initial = displayName.charAt(0).toUpperCase();
 
+  // Mobile menu button
+  const MobileMenuButton = () => (
+    <button
+      onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-green-600 text-white rounded-lg shadow-lg"
+      aria-label="Toggle menu"
+    >
+      <svg
+        className="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        {isMobileMenuOpen ? (
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        ) : (
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 6h16M4 12h16M4 18h16"
+          />
+        )}
+      </svg>
+    </button>
+  );
+
+  // Don't render sidebar differently based on view
+  if (isMobile) {
+    return (
+      <>
+        <MobileMenuButton />
+        
+        {/* Overlay */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+        
+        {/* Sidebar - transforms into drawer on mobile */}
+        <aside
+          className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
+            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex flex-col h-full">
+            {/* Farmer Profile Section */}
+            <Link 
+              href="/dashboard/farmer/profile"
+              className="p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                  {user?.photoURL ? (
+                    <img src={user.photoURL} alt={displayName} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    initial
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-gray-800 truncate">{displayName}</h3>
+                  <p className="text-xs text-gray-500">Farmer</p>
+                </div>
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+
+            {/* Navigation Links */}
+            <nav className="flex-1 p-4 overflow-y-auto">
+              <ul className="space-y-2">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.path;
+                  return (
+                    <li key={item.path}>
+                      <Link
+                        href={item.path}
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
+                          isActive
+                            ? 'bg-green-50 text-green-700 border-r-4 border-green-500'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-green-600'
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <span className={isActive ? 'text-green-600 flex-shrink-0' : 'text-gray-500 flex-shrink-0'}>{item.icon}</span>
+                        <span className="text-sm font-medium truncate">{item.name}</span>
+                        {isActive && (
+                          <span className="ml-auto flex-shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            {/* Logout Button */}
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('user');
+                  window.location.href = '/signin';
+                }}
+                className="flex items-center space-x-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50 transition-colors duration-200"
+              >
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main content wrapper - adds left padding on mobile when menu is closed */}
+        <div className="lg:hidden">
+          {/* This empty div ensures proper spacing */}
+        </div>
+      </>
+    );
+  }
+
+  // Desktop version - unchanged
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-      {/* Farmer Profile Section - Clickable to navigate to profile page */}
+    <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 min-h-screen flex-col">
+      {/* Farmer Profile Section */}
       <Link 
         href="/dashboard/farmer/profile"
         className="p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
       >
-        <div className="flex items-center space-x-3 mb-3">
-          <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold text-lg">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
             {user?.photoURL ? (
               <img src={user.photoURL} alt={displayName} className="w-12 h-12 rounded-full object-cover" />
             ) : (
@@ -125,30 +279,9 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
             <h3 className="font-medium text-gray-800 truncate">{displayName}</h3>
             <p className="text-xs text-gray-500">Farmer</p>
           </div>
-          {/* Add a small indicator that this is clickable */}
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-        </div>
-        
-        {/* Contact Information - Shows Email and Phone from Login */}
-        <div className="mt-3 space-y-2 text-sm">
-          {user?.email && (
-            <div className="flex items-center space-x-2 text-gray-600">
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <span className="truncate text-xs">{displayEmail}</span>
-            </div>
-          )}
-          {user?.phoneNumber && (
-            <div className="flex items-center space-x-2 text-gray-600">
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              <span className="truncate text-xs">{displayPhone}</span>
-            </div>
-          )}
         </div>
       </Link>
 
@@ -167,10 +300,10 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
                       : 'text-gray-700 hover:bg-gray-50 hover:text-green-600'
                   }`}
                 >
-                  <span className={isActive ? 'text-green-600' : 'text-gray-500'}>{item.icon}</span>
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className={isActive ? 'text-green-600 flex-shrink-0' : 'text-gray-500 flex-shrink-0'}>{item.icon}</span>
+                  <span className="text-sm font-medium truncate">{item.name}</span>
                   {isActive && (
-                    <span className="ml-auto">
+                    <span className="ml-auto flex-shrink-0">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
@@ -187,14 +320,13 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
       <div className="p-4 border-t border-gray-200">
         <button
           onClick={() => {
-            // Handle logout
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/signin';
           }}
           className="flex items-center space-x-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50 transition-colors duration-200"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
           <span className="text-sm font-medium">Logout</span>
