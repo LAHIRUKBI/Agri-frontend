@@ -11,26 +11,22 @@ interface UserData {
   phoneNumber?: string;
   role: string;
   photoURL?: string;
-  // Address Information
+  // Address Information only
   address?: string;
   addressLine2?: string;
   city?: string;
   state?: string;
   country?: string;
   zipCode?: string;
-  // Additional Contact Information
-  alternatePhone?: string;
-  emergencyContact?: string;
-  emergencyContactName?: string;
-  website?: string;
-  socialMedia?: {
-    facebook?: string;
-    twitter?: string;
-    instagram?: string;
-  };
   // Timestamps
   createdAt?: string;
   updatedAt?: string;
+}
+
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 export default function ProfilePage() {
@@ -38,9 +34,16 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserData>>({});
+  const [passwordData, setPasswordData] = useState<PasswordData>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const countries = [
@@ -57,6 +60,10 @@ export default function ProfilePage() {
   ];
 
   useEffect(() => {
+    loadUserData();
+  }, [router]);
+
+  const loadUserData = async () => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
 
@@ -67,14 +74,23 @@ export default function ProfilePage() {
 
     try {
       const userData = JSON.parse(userStr);
+      if (!userData.id) {
+        throw new Error('User ID not found');
+      }
       setUser(userData);
       setFormData(userData);
-      fetchUserDetails(userData.id, token);
+      await fetchUserDetails(userData.id, token);
     } catch (error) {
       console.error('Failed to parse user data:', error);
-      router.push('/signin');
+      handleAuthError();
     }
-  }, [router]);
+  };
+
+  const handleAuthError = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/signin');
+  };
 
   const fetchUserDetails = async (userId: string, token: string) => {
     try {
@@ -85,13 +101,25 @@ export default function ProfilePage() {
         }
       });
       
+      if (response.status === 401) {
+        // Token expired - try to refresh or redirect to login
+        handleAuthError();
+        return;
+      }
+      
       if (response.ok) {
         const data = await response.json();
         setUser(prevUser => ({ ...prevUser, ...data }));
         setFormData(prevData => ({ ...prevData, ...data }));
+        // Update localStorage with fresh data
+        localStorage.setItem('user', JSON.stringify({ ...JSON.parse(localStorage.getItem('user') || '{}'), ...data }));
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to fetch user details');
       }
     } catch (error) {
       console.error('Failed to fetch user details:', error);
+      setError('Failed to connect to server');
     } finally {
       setIsLoading(false);
     }
@@ -102,24 +130,86 @@ export default function ProfilePage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSocialMediaChange = (platform: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      socialMedia: {
-        ...prev.socialMedia,
-        [platform]: value
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !user?.id) {
+        handleAuthError();
+        return;
       }
-    }));
+
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${API_URL}/users/${user.id}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (response.status === 401) {
+        setError('Current password is incorrect');
+        return;
+      }
+
+      if (response.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+        setIsChangingPassword(false);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setError(null);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to update password');
+      }
+    } catch (error) {
+      console.error('Failed to update password:', error);
+      setError('Failed to connect to server');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setSaveSuccess(false);
+    setError(null);
     
     try {
       const token = localStorage.getItem('token');
-      if (!token || !user?.id) return;
+      if (!token || !user?.id) {
+        handleAuthError();
+        return;
+      }
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
       const response = await fetch(`${API_URL}/users/${user.id}`, {
@@ -131,16 +221,29 @@ export default function ProfilePage() {
         body: JSON.stringify(formData)
       });
 
+      if (response.status === 401) {
+        // Token might be expired, try to refresh or redirect
+        handleAuthError();
+        return;
+      }
+
       if (response.ok) {
         const updatedUser = await response.json();
         setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        // Update localStorage with new user data
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem('user', JSON.stringify({ ...currentUser, ...updatedUser }));
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
         setIsEditing(false);
+        setError(null);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to update profile');
       }
     } catch (error) {
       console.error('Failed to update profile:', error);
+      setError('Failed to connect to server');
     } finally {
       setIsSaving(false);
     }
@@ -149,13 +252,12 @@ export default function ProfilePage() {
   const tabs = [
     { id: 'personal', name: 'Personal Info', icon: '👤' },
     { id: 'address', name: 'Address', icon: '📍' },
-    { id: 'contact', name: 'Additional Contact', icon: '📞' },
   ];
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-green-50">
-        <div className="text-center">
+        <div className="text-center px-4">
           <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading profile...</p>
         </div>
@@ -164,80 +266,135 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50">
       <FarmerSidebar user={user} />
       
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
-              <p className="text-gray-600 mt-2">Manage your personal information and contact details</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">My Profile</h1>
+              <p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2">Manage your personal information and address</p>
             </div>
-            {saveSuccess && (
-              <div className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Profile updated successfully!</span>
+            
+            {/* Success/Error Messages - Mobile Responsive */}
+            <div className="order-first md:order-none mb-2 md:mb-0">
+              {saveSuccess && (
+                <div className="flex items-center space-x-2 px-3 py-2 md:px-4 md:py-2 bg-green-100 text-green-700 rounded-lg text-sm md:text-base">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Profile updated successfully!</span>
+                </div>
+              )}
+              {error && (
+                <div className="flex items-center space-x-2 px-3 py-2 md:px-4 md:py-2 bg-red-100 text-red-700 rounded-lg text-sm md:text-base">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="break-words">{error}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons - Mobile Responsive */}
+            {!isEditing && !isChangingPassword ? (
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button
+                  onClick={() => setIsChangingPassword(true)}
+                  className="flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm md:text-base"
+                >
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                  <span>Change Password</span>
+                </button>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base"
+                >
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span>Edit Profile</span>
+                </button>
               </div>
-            )}
-            {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                <span>Edit Profile</span>
-              </button>
             ) : (
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => {
                     setIsEditing(false);
+                    setIsChangingPassword(false);
                     setFormData(user || {});
+                    setPasswordData({
+                      currentPassword: '',
+                      newPassword: '',
+                      confirmPassword: ''
+                    });
                     setActiveTab('personal');
+                    setError(null);
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm md:text-base"
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSaving}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                >
-                  {isSaving ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Save Changes</span>
-                    </>
-                  )}
-                </button>
+                {isEditing && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isSaving}
+                    className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm md:text-base"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                )}
+                {isChangingPassword && (
+                  <button
+                    onClick={handlePasswordSubmit}
+                    disabled={isSaving}
+                    className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm md:text-base"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Update Password</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>
 
           {/* Profile Content */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="h-32 bg-gradient-to-r from-green-400 to-green-600"></div>
+            <div className="h-24 md:h-32 bg-gradient-to-r from-green-400 to-green-600"></div>
             
-            <div className="px-8 pb-8">
+            <div className="px-4 md:px-6 lg:px-8 pb-6 md:pb-8">
               {/* Avatar */}
-              <div className="flex justify-between items-end -mt-16 mb-6">
-                <div className="flex items-end space-x-4">
-                  <div className="w-24 h-24 rounded-full bg-white p-1 shadow-lg">
-                    <div className="w-full h-full rounded-full bg-green-600 flex items-center justify-center text-white text-3xl font-bold overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end -mt-12 md:-mt-16 mb-4 md:mb-6">
+                <div className="flex items-end space-x-3 md:space-x-4">
+                  <div className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-white p-1 shadow-lg flex-shrink-0">
+                    <div className="w-full h-full rounded-full bg-green-600 flex items-center justify-center text-white text-xl md:text-2xl lg:text-3xl font-bold overflow-hidden">
                       {user?.photoURL ? (
                         <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
                       ) : (
@@ -246,20 +403,66 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="mb-1">
-                    <h2 className="text-2xl font-bold text-gray-800">{user?.name}</h2>
-                    <p className="text-gray-600 capitalize">{user?.role}</p>
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-800 break-words">{user?.name}</h2>
+                    <p className="text-sm md:text-base text-gray-600 capitalize">{user?.role}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Tabs (only show when editing) */}
-              {isEditing && (
-                <div className="flex space-x-1 border-b border-gray-200 mb-6">
+              {/* Password Change Form */}
+              {isChangingPassword && (
+                <div className="mb-6 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
+                  <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">Change Password</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={passwordData.currentPassword}
+                        onChange={handlePasswordChange}
+                        className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordData.newPassword}
+                        onChange={handlePasswordChange}
+                        className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordData.confirmPassword}
+                        onChange={handlePasswordChange}
+                        className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs md:text-sm text-gray-500 mt-2">
+                      Password must be at least 6 characters long
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Tabs (only show when editing) - Mobile Responsive */}
+              {isEditing && !isChangingPassword && (
+                <div className="flex space-x-1 border-b border-gray-200 mb-6 overflow-x-auto pb-1">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium transition-colors ${
+                      className={`flex items-center space-x-1 md:space-x-2 px-3 py-2 md:px-4 md:py-2 text-xs md:text-sm font-medium whitespace-nowrap transition-colors ${
                         activeTab === tab.id
                           ? 'text-green-600 border-b-2 border-green-600'
                           : 'text-gray-500 hover:text-gray-700'
@@ -274,12 +477,12 @@ export default function ProfilePage() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Personal Information */}
-                {(!isEditing || activeTab === 'personal') && (
+                {(!isEditing || activeTab === 'personal') && !isChangingPassword && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
                       Personal Information
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                         {isEditing ? (
@@ -288,10 +491,10 @@ export default function ProfilePage() {
                             name="name"
                             value={formData.name || ''}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                            className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2">{user?.name || 'Not provided'}</p>
+                          <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user?.name || 'Not provided'}</p>
                         )}
                       </div>
 
@@ -303,10 +506,10 @@ export default function ProfilePage() {
                             name="email"
                             value={formData.email || ''}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                            className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2">{user?.email || 'Not provided'}</p>
+                          <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user?.email || 'Not provided'}</p>
                         )}
                       </div>
 
@@ -318,16 +521,16 @@ export default function ProfilePage() {
                             name="phoneNumber"
                             value={formData.phoneNumber || ''}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                            className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2">{user?.phoneNumber || 'Not provided'}</p>
+                          <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user?.phoneNumber || 'Not provided'}</p>
                         )}
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
-                        <p className="text-gray-900 py-2">
+                        <p className="text-sm md:text-base text-gray-900 py-2">
                           {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
@@ -340,12 +543,12 @@ export default function ProfilePage() {
                 )}
 
                 {/* Address Information */}
-                {isEditing && activeTab === 'address' && (
+                {isEditing && activeTab === 'address' && !isChangingPassword && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
                       Address Information
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
                         <input
@@ -354,7 +557,7 @@ export default function ProfilePage() {
                           value={formData.address || ''}
                           onChange={handleInputChange}
                           placeholder="123 Main St"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                         />
                       </div>
 
@@ -366,7 +569,7 @@ export default function ProfilePage() {
                           value={formData.addressLine2 || ''}
                           onChange={handleInputChange}
                           placeholder="Apt, Suite, Building"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                         />
                       </div>
 
@@ -378,7 +581,7 @@ export default function ProfilePage() {
                           value={formData.city || ''}
                           onChange={handleInputChange}
                           placeholder="New York"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                         />
                       </div>
 
@@ -390,7 +593,7 @@ export default function ProfilePage() {
                           value={formData.state || ''}
                           onChange={handleInputChange}
                           placeholder="NY"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                         />
                       </div>
 
@@ -400,7 +603,7 @@ export default function ProfilePage() {
                           name="country"
                           value={formData.country || ''}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                         >
                           <option value="">Select country</option>
                           {countries.map(country => (
@@ -419,218 +622,65 @@ export default function ProfilePage() {
                           value={formData.zipCode || ''}
                           onChange={handleInputChange}
                           placeholder="10001"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
+                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
                         />
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Additional Contact Information */}
-                {isEditing && activeTab === 'contact' && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                      Additional Contact Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Alternate Phone Number</label>
-                        <input
-                          type="tel"
-                          name="alternatePhone"
-                          value={formData.alternatePhone || ''}
-                          onChange={handleInputChange}
-                          placeholder="+1 234 567 8900"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Name</label>
-                        <input
-                          type="text"
-                          name="emergencyContactName"
-                          value={formData.emergencyContactName || ''}
-                          onChange={handleInputChange}
-                          placeholder="John Doe"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Number</label>
-                        <input
-                          type="tel"
-                          name="emergencyContact"
-                          value={formData.emergencyContact || ''}
-                          onChange={handleInputChange}
-                          placeholder="+1 234 567 8900"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                        <input
-                          type="url"
-                          name="website"
-                          value={formData.website || ''}
-                          onChange={handleInputChange}
-                          placeholder="https://mywebsite.com"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <h4 className="text-md font-medium text-gray-700 mb-3">Social Media</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">Facebook</label>
-                            <input
-                              type="url"
-                              placeholder="Facebook URL"
-                              value={formData.socialMedia?.facebook || ''}
-                              onChange={(e) => handleSocialMediaChange('facebook', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">Twitter</label>
-                            <input
-                              type="url"
-                              placeholder="Twitter URL"
-                              value={formData.socialMedia?.twitter || ''}
-                              onChange={(e) => handleSocialMediaChange('twitter', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">Instagram</label>
-                            <input
-                              type="url"
-                              placeholder="Instagram URL"
-                              value={formData.socialMedia?.instagram || ''}
-                              onChange={(e) => handleSocialMediaChange('instagram', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* View Mode - Show All Information */}
-                {!isEditing && (
+                {/* View Mode - Show Address Information Only */}
+                {!isEditing && !isChangingPassword && (
                   <>
                     {/* Address Information (View Mode) */}
                     {(user?.address || user?.addressLine2 || user?.city || user?.state || user?.country || user?.zipCode) && (
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
                           Address Information
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                           {user?.address && (
                             <div className="md:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                              <p className="text-gray-900 py-2">{user.address}</p>
+                              <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user.address}</p>
                             </div>
                           )}
                           {user?.addressLine2 && (
                             <div className="md:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
-                              <p className="text-gray-900 py-2">{user.addressLine2}</p>
+                              <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user.addressLine2}</p>
                             </div>
                           )}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                          
+                          {/* Responsive grid for address details */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 w-full">
                             {user?.city && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                                <p className="text-gray-900 py-2">{user.city}</p>
+                              <div className="col-span-1">
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">City</label>
+                                <p className="text-sm md:text-base text-gray-900 break-words">{user.city}</p>
                               </div>
                             )}
                             {user?.state && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                                <p className="text-gray-900 py-2">{user.state}</p>
+                              <div className="col-span-1">
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">State</label>
+                                <p className="text-sm md:text-base text-gray-900 break-words">{user.state}</p>
                               </div>
                             )}
                             {user?.country && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                                <p className="text-gray-900 py-2">
+                              <div className="col-span-1">
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Country</label>
+                                <p className="text-sm md:text-base text-gray-900 break-words">
                                   {countries.find(c => c.code === user.country)?.name || user.country}
                                 </p>
                               </div>
                             )}
                             {user?.zipCode && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
-                                <p className="text-gray-900 py-2">{user.zipCode}</p>
+                              <div className="col-span-1">
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                                <p className="text-sm md:text-base text-gray-900 break-words">{user.zipCode}</p>
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Additional Contact Information (View Mode) */}
-                    {(user?.alternatePhone || user?.emergencyContact || user?.website || user?.socialMedia) && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                          Additional Contact Information
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {user?.alternatePhone && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Alternate Phone</label>
-                              <p className="text-gray-900 py-2">{user.alternatePhone}</p>
-                            </div>
-                          )}
-                          {user?.emergencyContact && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
-                              <p className="text-gray-900 py-2">
-                                {user.emergencyContactName ? `${user.emergencyContactName}: ` : ''}{user.emergencyContact}
-                              </p>
-                            </div>
-                          )}
-                          {user?.website && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                              <p className="text-gray-900 py-2">
-                                <a href={user.website} target="_blank" rel="noopener noreferrer" 
-                                   className="text-green-600 hover:text-green-700">
-                                  {user.website}
-                                </a>
-                              </p>
-                            </div>
-                          )}
-                          {user?.socialMedia && Object.keys(user.socialMedia).length > 0 && (
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Social Media</label>
-                              <div className="flex space-x-4 py-2">
-                                {user.socialMedia.facebook && (
-                                  <a href={user.socialMedia.facebook} target="_blank" rel="noopener noreferrer"
-                                     className="text-blue-600 hover:text-blue-700">
-                                    Facebook
-                                  </a>
-                                )}
-                                {user.socialMedia.twitter && (
-                                  <a href={user.socialMedia.twitter} target="_blank" rel="noopener noreferrer"
-                                     className="text-blue-400 hover:text-blue-500">
-                                    Twitter
-                                  </a>
-                                )}
-                                {user.socialMedia.instagram && (
-                                  <a href={user.socialMedia.instagram} target="_blank" rel="noopener noreferrer"
-                                     className="text-pink-600 hover:text-pink-700">
-                                    Instagram
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
