@@ -1,39 +1,18 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import AdminSidebar from '@/app/navigation/admin/page';
 
 export default function RotationRulesPage() {
   const [rules, setRules] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isFetchingAI, setIsFetchingAI] = useState(false);
 
-  // Helper function to get the auth token (adjust this based on how you store your JWT)
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token'); // or sessionStorage, or cookies
+    const token = localStorage.getItem('token'); 
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}` 
     };
   };
-
-  useEffect(() => {
-    fetchPendingRules();
-  }, []);
-
-  const fetchPendingRules = async () => {
-    try {
-      const res = await fetch('http://localhost:5000/api/rotation/pending', {
-        headers: getAuthHeaders()
-      });
-      const data = await res.json();
-      if (data.success) setRules(data.data);
-    } catch (error) {
-      console.error("Error loading rules:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
 
   const handleGetRules = async () => {
     setIsFetchingAI(true);
@@ -44,9 +23,8 @@ export default function RotationRulesPage() {
       });
       const data = await res.json();
       if (data.success) {
-        // Refresh the list to show the newly fetched rules
-        fetchPendingRules();
-        alert("Successfully fetched new crop rotation rules from the internet!");
+        // Load the transient rules into state
+        setRules(data.data); 
       } else {
         alert("Failed to fetch new rules.");
       }
@@ -58,22 +36,29 @@ export default function RotationRulesPage() {
     }
   };
 
-  const handleAction = async (id: string, action: 'approved' | 'ignored') => {
-    setRules(rules.filter(r => r._id !== id));
+  const handleAction = async (id: string, action: 'approved' | 'ignored', ruleData?: any) => {
+    setRules(prev => prev.filter(r => r._id !== id));
     
-    // API Call to update status in DB
-    try {
-      await fetch(`http://localhost:5000/api/rotation/${id}/status`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status: action })
-      });
-    } catch (error) {
-      console.error("Error updating rule status:", error);
+    if (action === 'ignored') return;
+
+    if (action === 'approved' && ruleData) {
+      try {
+        const res = await fetch(`http://localhost:5000/api/rotation/save-rule`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(ruleData)
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+          alert(`"${ruleData.ruleName}" successfully added to the database!`);
+        }
+      } catch (error) {
+        console.error("Error saving rule to database:", error);
+        alert("Error saving rule.");
+      }
     }
   };
-
-  if (loading) return <div className="flex min-h-screen bg-gray-50"><main className="flex-1 p-6 text-black">Loading pending rules...</main></div>;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -82,14 +67,11 @@ export default function RotationRulesPage() {
       </aside>
 
       <main className="flex-1 p-8 max-w-6xl mx-auto space-y-6">
-        {/* Header Section */}
         <div className="flex justify-between items-end border-b border-gray-200 pb-5">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900">AI Crop Rotation Rules</h1>
-            <p className="text-gray-600 mt-2">Review and manage crop sequence patterns retrieved by Gemini AI.</p>
+            <h1 className="text-3xl font-extrabold text-gray-900">Crop Rotation Rules</h1>
           </div>
           
-          {/* Get Rules Button */}
           <button 
             onClick={handleGetRules}
             disabled={isFetchingAI}
@@ -106,7 +88,6 @@ export default function RotationRulesPage() {
           </button>
         </div>
 
-        {/* Rules Display Section */}
         {rules.length === 0 ? (
           <div className="bg-white p-12 text-center rounded-xl border border-gray-200 shadow-sm text-gray-500 flex flex-col items-center">
             <span className="text-4xl mb-4"></span>
@@ -128,7 +109,6 @@ export default function RotationRulesPage() {
                   
                   <p className="text-gray-700 mb-5 leading-relaxed">{rule.description}</p>
                   
-                  {/* Source and Date Metadata */}
                   <div className="flex flex-wrap gap-6 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100">
                     <p className="flex items-center gap-1">
                       <strong className="text-gray-700">Source:</strong> 
@@ -141,10 +121,9 @@ export default function RotationRulesPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex flex-col gap-3 min-w-[160px] w-full md:w-auto">
                   <button 
-                    onClick={() => handleAction(rule._id, 'approved')}
+                    onClick={() => handleAction(rule._id, 'approved', rule)}
                     className="bg-green-600 text-white px-4 py-2.5 rounded-lg font-bold hover:bg-green-700 transition-colors shadow-sm flex items-center justify-center gap-2"
                   >
                     ✓ Add Database
