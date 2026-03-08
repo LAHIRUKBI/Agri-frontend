@@ -90,7 +90,7 @@ export default function RotationPlanPage() {
     setPastCrops(updatedCrops);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!targetCrop.trim()) {
@@ -108,13 +108,6 @@ export default function RotationPlanPage() {
     setEvaluation(null);
 
     try {
-      const formattedCrops = pastCrops.map(crop => ({
-        cropName: crop.cropName,
-        timePeriod: `${crop.startMonth} ${crop.startYear} to ${crop.endMonth} ${crop.endYear}`,
-        fertilizers: crop.fertilizers,
-        pesticides: crop.pesticides
-      }));
-
       const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:5000/api/rotation/plan', {
         method: 'POST',
@@ -125,7 +118,7 @@ export default function RotationPlanPage() {
         body: JSON.stringify({
           targetCrop,
           currentMonth: currentDate,
-          previousCrops: formattedCrops,
+          previousCrops: pastCrops, // <--- CHANGED THIS: Send the raw data directly!
           language
         }),
       });
