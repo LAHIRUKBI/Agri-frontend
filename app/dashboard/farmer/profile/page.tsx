@@ -11,14 +11,13 @@ interface UserData {
   phoneNumber?: string;
   role: string;
   photoURL?: string;
-  // Address Information only
   address?: string;
   addressLine2?: string;
   city?: string;
   state?: string;
   country?: string;
   zipCode?: string;
-  // Timestamps
+  activeCultivations?: any[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -57,6 +56,11 @@ export default function ProfilePage() {
     { code: 'BD', name: 'Bangladesh' },
     { code: 'NP', name: 'Nepal' },
     { code: 'AE', name: 'UAE' },
+  ];
+
+  const tabs = [
+    { id: 'personal', name: 'Personal Info' },
+    { id: 'address', name: 'Address' },
   ];
 
   useEffect(() => {
@@ -102,7 +106,6 @@ export default function ProfilePage() {
       });
       
       if (response.status === 401) {
-        // Token expired - try to refresh or redirect to login
         handleAuthError();
         return;
       }
@@ -111,7 +114,6 @@ export default function ProfilePage() {
         const data = await response.json();
         setUser(prevUser => ({ ...prevUser, ...data }));
         setFormData(prevData => ({ ...prevData, ...data }));
-        // Update localStorage with fresh data
         localStorage.setItem('user', JSON.stringify({ ...JSON.parse(localStorage.getItem('user') || '{}'), ...data }));
       } else {
         const errorData = await response.json();
@@ -137,17 +139,14 @@ export default function ProfilePage() {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError('New passwords do not match');
       return;
     }
-
     if (passwordData.newPassword.length < 6) {
       setError('Password must be at least 6 characters long');
       return;
     }
-
     setIsSaving(true);
     setError(null);
 
@@ -157,7 +156,6 @@ export default function ProfilePage() {
         handleAuthError();
         return;
       }
-
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
       const response = await fetch(`${API_URL}/users/${user.id}/password`, {
         method: 'PUT',
@@ -175,23 +173,17 @@ export default function ProfilePage() {
         setError('Current password is incorrect');
         return;
       }
-
       if (response.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
         setIsChangingPassword(false);
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         setError(null);
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to update password');
       }
     } catch (error) {
-      console.error('Failed to update password:', error);
       setError('Failed to connect to server');
     } finally {
       setIsSaving(false);
@@ -222,7 +214,6 @@ export default function ProfilePage() {
       });
 
       if (response.status === 401) {
-        // Token might be expired, try to refresh or redirect
         handleAuthError();
         return;
       }
@@ -230,7 +221,6 @@ export default function ProfilePage() {
       if (response.ok) {
         const updatedUser = await response.json();
         setUser(updatedUser);
-        // Update localStorage with new user data
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
         localStorage.setItem('user', JSON.stringify({ ...currentUser, ...updatedUser }));
         setSaveSuccess(true);
@@ -242,17 +232,11 @@ export default function ProfilePage() {
         setError(errorData.message || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Failed to update profile:', error);
       setError('Failed to connect to server');
     } finally {
       setIsSaving(false);
     }
   };
-
-  const tabs = [
-    { id: 'personal', name: 'Personal Info', icon: '👤' },
-    { id: 'address', name: 'Address', icon: '📍' },
-  ];
 
   if (isLoading) {
     return (
@@ -271,52 +255,36 @@ export default function ProfilePage() {
       
       <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">My Profile</h1>
-              <p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2">Manage your personal information and address</p>
             </div>
             
-            {/* Success/Error Messages - Mobile Responsive */}
             <div className="order-first md:order-none mb-2 md:mb-0">
               {saveSuccess && (
                 <div className="flex items-center space-x-2 px-3 py-2 md:px-4 md:py-2 bg-green-100 text-green-700 rounded-lg text-sm md:text-base">
-                  <svg className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
                   <span>Profile updated successfully!</span>
                 </div>
               )}
               {error && (
                 <div className="flex items-center space-x-2 px-3 py-2 md:px-4 md:py-2 bg-red-100 text-red-700 rounded-lg text-sm md:text-base">
-                  <svg className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
                   <span className="break-words">{error}</span>
                 </div>
               )}
             </div>
 
-            {/* Action Buttons - Mobile Responsive */}
             {!isEditing && !isChangingPassword ? (
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => setIsChangingPassword(true)}
                   className="flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm md:text-base"
                 >
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
                   <span>Change Password</span>
                 </button>
                 <button
                   onClick={() => setIsEditing(true)}
                   className="flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base"
                 >
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
                   <span>Edit Profile</span>
                 </button>
               </div>
@@ -327,11 +295,7 @@ export default function ProfilePage() {
                     setIsEditing(false);
                     setIsChangingPassword(false);
                     setFormData(user || {});
-                    setPasswordData({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: ''
-                    });
+                    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                     setActiveTab('personal');
                     setError(null);
                   }}
@@ -340,57 +304,23 @@ export default function ProfilePage() {
                   Cancel
                 </button>
                 {isEditing && (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isSaving}
-                    className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm md:text-base"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>Save Changes</span>
-                      </>
-                    )}
+                  <button onClick={handleSubmit} disabled={isSaving} className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm md:text-base">
+                    {isSaving ? <span>Saving...</span> : <span>Save Changes</span>}
                   </button>
                 )}
                 {isChangingPassword && (
-                  <button
-                    onClick={handlePasswordSubmit}
-                    disabled={isSaving}
-                    className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm md:text-base"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Updating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>Update Password</span>
-                      </>
-                    )}
+                  <button onClick={handlePasswordSubmit} disabled={isSaving} className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm md:text-base">
+                    {isSaving ? <span>Updating...</span> : <span>Update Password</span>}
                   </button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Profile Content */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="h-24 md:h-32 bg-gradient-to-r from-green-400 to-green-600"></div>
             
             <div className="px-4 md:px-6 lg:px-8 pb-6 md:pb-8">
-              {/* Avatar */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end -mt-12 md:-mt-16 mb-4 md:mb-6">
                 <div className="flex items-end space-x-3 md:space-x-4">
                   <div className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-white p-1 shadow-lg flex-shrink-0">
@@ -409,284 +339,145 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Password Change Form */}
-              {isChangingPassword && (
-                <div className="mb-6 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">Change Password</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
-                      <input
-                        type="password"
-                        name="currentPassword"
-                        value={passwordData.currentPassword}
-                        onChange={handlePasswordChange}
-                        className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                      <input
-                        type="password"
-                        name="newPassword"
-                        value={passwordData.newPassword}
-                        onChange={handlePasswordChange}
-                        className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        value={passwordData.confirmPassword}
-                        onChange={handlePasswordChange}
-                        className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        required
-                      />
-                    </div>
-                    <p className="text-xs md:text-sm text-gray-500 mt-2">
-                      Password must be at least 6 characters long
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Tabs (only show when editing) - Mobile Responsive */}
-              {isEditing && !isChangingPassword && (
+              {!isChangingPassword && (
                 <div className="flex space-x-1 border-b border-gray-200 mb-6 overflow-x-auto pb-1">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center space-x-1 md:space-x-2 px-3 py-2 md:px-4 md:py-2 text-xs md:text-sm font-medium whitespace-nowrap transition-colors ${
+                      className={`px-3 py-2 md:px-4 md:py-2 text-xs md:text-sm font-medium whitespace-nowrap transition-colors ${
                         activeTab === tab.id
                           ? 'text-green-600 border-b-2 border-green-600'
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                     >
-                      <span>{tab.icon}</span>
-                      <span>{tab.name}</span>
+                      {tab.name}
                     </button>
                   ))}
                 </div>
               )}
 
+              {isChangingPassword && (
+                 <div className="mb-6 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200">
+                   <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">Change Password</h3>
+                   <div className="space-y-4">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                       <input type="password" name="currentPassword" value={passwordData.currentPassword} onChange={handlePasswordChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" required />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                       <input type="password" name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" required minLength={6} />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                       <input type="password" name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" required />
+                     </div>
+                   </div>
+                 </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Personal Information */}
-                {(!isEditing || activeTab === 'personal') && !isChangingPassword && (
+                
+                {activeTab === 'personal' && !isChangingPassword && (
                   <div>
-                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                      Personal Information
-                    </h3>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Personal Information</h3>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                         {isEditing ? (
-                          <input
-                            type="text"
-                            name="name"
-                            value={formData.name || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                          />
+                          <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" />
                         ) : (
                           <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user?.name || 'Not provided'}</p>
                         )}
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                         {isEditing ? (
-                          <input
-                            type="email"
-                            name="email"
-                            value={formData.email || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                          />
+                          <input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" />
                         ) : (
                           <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user?.email || 'Not provided'}</p>
                         )}
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                         {isEditing ? (
-                          <input
-                            type="tel"
-                            name="phoneNumber"
-                            value={formData.phoneNumber || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                          />
+                          <input type="tel" name="phoneNumber" value={formData.phoneNumber || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" />
                         ) : (
                           <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user?.phoneNumber || 'Not provided'}</p>
                         )}
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
                         <p className="text-sm md:text-base text-gray-900 py-2">
-                          {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          }) : 'Not available'}
+                          {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Not available'}
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Address Information */}
-                {isEditing && activeTab === 'address' && !isChangingPassword && (
+                {activeTab === 'address' && !isChangingPassword && (
                   <div>
-                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                      Address Information
-                    </h3>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Address Information</h3>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                        <input
-                          type="text"
-                          name="address"
-                          value={formData.address || ''}
-                          onChange={handleInputChange}
-                          placeholder="123 Main St"
-                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        />
+                        {isEditing ? (
+                           <input type="text" name="address" value={formData.address || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" />
+                        ) : (
+                           <p className="text-sm md:text-base text-gray-900 py-2">{user?.address || 'N/A'}</p>
+                        )}
                       </div>
-
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 2 (Optional)</label>
-                        <input
-                          type="text"
-                          name="addressLine2"
-                          value={formData.addressLine2 || ''}
-                          onChange={handleInputChange}
-                          placeholder="Apt, Suite, Building"
-                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        />
+                        {isEditing ? (
+                           <input type="text" name="addressLine2" value={formData.addressLine2 || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black" />
+                        ) : (
+                           <p className="text-sm md:text-base text-gray-900 py-2">{user?.addressLine2 || 'N/A'}</p>
+                        )}
                       </div>
-
-                      <div>
+                      <div className="col-span-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                        <input
-                          type="text"
-                          name="city"
-                          value={formData.city || ''}
-                          onChange={handleInputChange}
-                          placeholder="New York"
-                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        />
+                        {isEditing ? (
+                           <input type="text" name="city" value={formData.city || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg outline-none text-black" />
+                        ) : (
+                           <p className="text-sm text-gray-900">{user?.city || 'N/A'}</p>
+                        )}
                       </div>
-
-                      <div>
+                      <div className="col-span-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">State/Province</label>
-                        <input
-                          type="text"
-                          name="state"
-                          value={formData.state || ''}
-                          onChange={handleInputChange}
-                          placeholder="NY"
-                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        />
+                        {isEditing ? (
+                           <input type="text" name="state" value={formData.state || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg outline-none text-black" />
+                        ) : (
+                           <p className="text-sm text-gray-900">{user?.state || 'N/A'}</p>
+                        )}
                       </div>
-
-                      <div>
+                      <div className="col-span-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                        <select
-                          name="country"
-                          value={formData.country || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        >
-                          <option value="">Select country</option>
-                          {countries.map(country => (
-                            <option key={country.code} value={country.code}>
-                              {country.name}
-                            </option>
-                          ))}
-                        </select>
+                        {isEditing ? (
+                           <select name="country" value={formData.country || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black outline-none">
+                             <option value="">Select country</option>
+                             {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                           </select>
+                        ) : (
+                           <p className="text-sm text-gray-900">{countries.find(c => c.code === user?.country)?.name || user?.country || 'N/A'}</p>
+                        )}
                       </div>
-
-                      <div>
+                      <div className="col-span-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">ZIP/Postal Code</label>
-                        <input
-                          type="text"
-                          name="zipCode"
-                          value={formData.zipCode || ''}
-                          onChange={handleInputChange}
-                          placeholder="10001"
-                          className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-black text-sm md:text-base"
-                        />
+                        {isEditing ? (
+                           <input type="text" name="zipCode" value={formData.zipCode || ''} onChange={handleInputChange} className="w-full px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg outline-none text-black" />
+                        ) : (
+                           <p className="text-sm text-gray-900">{user?.zipCode || 'N/A'}</p>
+                        )}
                       </div>
                     </div>
                   </div>
                 )}
-
-                {/* View Mode - Show Address Information Only */}
-                {!isEditing && !isChangingPassword && (
-                  <>
-                    {/* Address Information (View Mode) */}
-                    {(user?.address || user?.addressLine2 || user?.city || user?.state || user?.country || user?.zipCode) && (
-                      <div>
-                        <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                          Address Information
-                        </h3>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                          {user?.address && (
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                              <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user.address}</p>
-                            </div>
-                          )}
-                          {user?.addressLine2 && (
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
-                              <p className="text-sm md:text-base text-gray-900 py-2 break-words">{user.addressLine2}</p>
-                            </div>
-                          )}
-                          
-                          {/* Responsive grid for address details */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 w-full">
-                            {user?.city && (
-                              <div className="col-span-1">
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">City</label>
-                                <p className="text-sm md:text-base text-gray-900 break-words">{user.city}</p>
-                              </div>
-                            )}
-                            {user?.state && (
-                              <div className="col-span-1">
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">State</label>
-                                <p className="text-sm md:text-base text-gray-900 break-words">{user.state}</p>
-                              </div>
-                            )}
-                            {user?.country && (
-                              <div className="col-span-1">
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Country</label>
-                                <p className="text-sm md:text-base text-gray-900 break-words">
-                                  {countries.find(c => c.code === user.country)?.name || user.country}
-                                </p>
-                              </div>
-                            )}
-                            {user?.zipCode && (
-                              <div className="col-span-1">
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                                <p className="text-sm md:text-base text-gray-900 break-words">{user.zipCode}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                
               </form>
+
             </div>
           </div>
         </div>

@@ -31,10 +31,10 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -59,6 +59,16 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+      )
+    },
+    {
+      name: 'Crop cultivation view',
+      path: '/dashboard/farmer/cultivation-view',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
       )
     },
@@ -169,7 +179,7 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
     return (
       <>
         <MobileMenuButton />
-        
+
         {/* Overlay */}
         {isMobileMenuOpen && (
           <div
@@ -177,16 +187,15 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
             onClick={() => setIsMobileMenuOpen(false)}
           />
         )}
-        
+
         {/* Sidebar - transforms into drawer on mobile */}
         <aside
-          className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
-            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
         >
           <div className="flex flex-col h-full">
             {/* Farmer Profile Section */}
-            <Link 
+            <Link
               href="/dashboard/farmer/profile"
               className="p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
               onClick={() => setIsMobileMenuOpen(false)}
@@ -218,11 +227,10 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
                     <li key={item.path}>
                       <Link
                         href={item.path}
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
-                          isActive
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${isActive
                             ? 'bg-green-50 text-green-700 border-r-4 border-green-500'
                             : 'text-gray-700 hover:bg-gray-50 hover:text-green-600'
-                        }`}
+                          }`}
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         <span className={isActive ? 'text-green-600 flex-shrink-0' : 'text-gray-500 flex-shrink-0'}>{item.icon}</span>
@@ -272,7 +280,7 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
   return (
     <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 min-h-screen flex-col">
       {/* Farmer Profile Section */}
-      <Link 
+      <Link
         href="/dashboard/farmer/profile"
         className="p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
       >
@@ -303,11 +311,10 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
               <li key={item.path}>
                 <Link
                   href={item.path}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
-                    isActive
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${isActive
                       ? 'bg-green-50 text-green-700 border-r-4 border-green-500'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-green-600'
-                  }`}
+                    }`}
                 >
                   <span className={isActive ? 'text-green-600 flex-shrink-0' : 'text-gray-500 flex-shrink-0'}>{item.icon}</span>
                   <span className="text-sm font-medium truncate">{item.name}</span>
