@@ -86,11 +86,11 @@ export default function CultivationPage() {
         {/* --- INPUT PANEL --- */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-5 items-end">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Location (District)</label>
+            <label className=" text-black block text-sm font-semibold text-gray-700 mb-2">Location (District)</label>
             <select 
               value={district} 
               onChange={(e) => setDistrict(e.target.value)} 
-              className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+              className="text-black tesxt-black w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             >
               <option value="">Select District</option>
               {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -112,7 +112,7 @@ export default function CultivationPage() {
             <select 
               value={language} 
               onChange={(e) => setLanguage(e.target.value)} 
-              className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+              className="text-black w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             >
               <option value="English">English</option>
               <option value="Sinhala">Sinhala</option>
