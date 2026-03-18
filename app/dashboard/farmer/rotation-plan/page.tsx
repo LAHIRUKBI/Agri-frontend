@@ -41,7 +41,7 @@ export default function RotationPlanPage() {
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   
-  // NEW: State to hold the Initial Soil Configuration
+  // State to hold the Initial Soil Configuration
   const [initialSoilData, setInitialSoilData] = useState<any>(null);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function RotationPlanPage() {
     const userStr = localStorage.getItem('user');
     if (userStr) setUser(JSON.parse(userStr));
 
-    // NEW: Fetch Baseline Soil Data on Load
+    // Fetch Baseline Soil Data on Load
     const fetchSoilData = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/nutrients');
@@ -101,126 +101,223 @@ export default function RotationPlanPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <FarmerSidebar user={user} />
-      <main className="flex-1 overflow-y-auto py-8 px-4 sm:px-8">
-        <div className="max-w-4xl mx-auto space-y-8">
+      <main className="flex-1 overflow-y-auto py-6 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto space-y-4">
           
-          <div className="text-center sm:text-left bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-            <h1 className="text-3xl font-extrabold text-green-800 tracking-tight">AI Rotation & Soil Evaluator</h1>
-            <p className="mt-2 text-sm text-gray-500 font-medium">Analyze historical data to generate predictive soil nutrient graphs and planting suggestions.</p>
+          {/* Header - Smaller */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <h1 className="text-xl font-semibold text-green-800">crop Rotation & Soil Evaluator</h1>
+            <p className="text-xs text-gray-500 mt-1">Analyze historical data for nutrient predictions and planting suggestions</p>
           </div>
 
-          {/* Initial Soil Configuration Banner */}
+          {/* Initial Soil Configuration - Compact */}
           {initialSoilData && (
-            <div className="bg-white shadow-sm rounded-3xl border border-blue-100 overflow-hidden">
-              <div className="px-6 py-4 bg-blue-50 border-b border-blue-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
+              <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
                 <div>
-                   <h2 className="text-sm font-bold text-blue-900 uppercase tracking-wider">Current Soil Baseline Configuration</h2>
-                   <p className="text-xs text-blue-700 mt-1">Starting parameters loaded from administration.</p>
-                </div>
-                <div className="bg-blue-200 text-blue-900 px-4 py-1.5 rounded-xl text-xs font-extrabold shadow-sm">
-                  pH Range: {initialSoilData.phMin} - {initialSoilData.phMax}
+                  <h2 className="text-xs font-semibold text-blue-900">Current Soil Baseline</h2>
+                  <p className="text-[10px] text-blue-700">pH: {initialSoilData.phMin} - {initialSoilData.phMax}</p>
                 </div>
               </div>
-              <div className="p-5 bg-gradient-to-b from-blue-50/30 to-white">
-                <div className="flex flex-wrap gap-3">
-                   {initialSoilData.nutrients.map((nut:any, i:number) => (
-                     <div key={i} className="flex-1 min-w-[130px] p-3 rounded-2xl bg-white border border-blue-50 shadow-sm flex flex-col items-center justify-center hover:shadow-md transition-shadow">
-                        <span className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1">{nut.name} ({nut.symbol})</span>
-                        <div className="flex items-baseline gap-1 mt-1">
-                            <span className="text-sm font-black text-gray-800">{nut.min} - {nut.max}</span>
-                            <span className="text-[9px] font-bold text-gray-400">{nut.unit}</span>
-                        </div>
-                        <span className={`mt-2 text-[8px] px-2 py-0.5 rounded-md font-bold uppercase tracking-widest ${
+              <div className="p-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                  {initialSoilData.nutrients.map((nut: any, i: number) => (
+                    <div key={i} className="p-2 bg-gray-50 rounded border border-gray-100">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-semibold text-gray-600">{nut.symbol}</span>
+                        <span className={`text-[8px] px-1 py-0.5 rounded ${
                           nut.type === 'main' ? 'bg-green-100 text-green-700' : 
                           nut.type === 'secondary' ? 'bg-blue-100 text-blue-700' : 
                           'bg-gray-100 text-gray-600'
                         }`}>
                           {nut.type}
                         </span>
-                     </div>
-                   ))}
+                      </div>
+                      <p className="text-xs font-medium text-gray-800 mt-1">{nut.min}-{nut.max} {nut.unit}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-white shadow-sm rounded-3xl border border-green-100 overflow-hidden">
-              <div className="px-6 py-4 bg-green-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">1. Intended Crop Configuration</h2>
+          {/* Form - More Compact */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Target Crop */}
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="px-4 py-2 bg-green-600">
+                <h2 className="text-xs font-semibold text-white">1. Target Crop</h2>
               </div>
-              <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <label className="text-sm font-bold text-gray-700 whitespace-nowrap">I want to plant:</label>
-                <input type="text" required placeholder="e.g., Tomato, Carrot" className="text-black w-full px-4 py-3 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-green-400 bg-gray-50" value={targetCrop} onChange={(e) => setTargetCrop(e.target.value)} />
+              <div className="p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <label className="text-xs font-medium text-black w-24">Crop to plant:</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="e.g., Tomato, Carrot" 
+                    className="text-black flex-1 text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-green-400 outline-none" 
+                    value={targetCrop} 
+                    onChange={(e) => setTargetCrop(e.target.value)} 
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white shadow-sm rounded-3xl border border-green-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-green-100 bg-green-50">
-                <h2 className="text-sm font-bold text-green-800 uppercase tracking-wider">2. Historical Crop Timeline</h2>
+            {/* Historical Crops */}
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="px-4 py-2 bg-green-50 border-b border-gray-200">
+                <h2 className="text-xs font-semibold text-green-800">2. Historical Crop Timeline</h2>
               </div>
-              <div className="p-6">
+              <div className="p-4 space-y-3">
                 {pastCrops.map((crop, index) => (
-                  <div key={index} className="mb-6 p-5 border border-green-50 rounded-2xl relative bg-white shadow-md">
+                  <div key={index} className="relative p-3 border border-gray-100 rounded bg-gray-50">
                     {pastCrops.length > 1 && (
-                      <button type="button" onClick={() => removeCropField(index)} className="absolute -top-3 -right-3 text-red-500 hover:text-white hover:bg-red-500 text-sm font-bold bg-white border border-red-100 w-8 h-8 rounded-full shadow-sm flex items-center justify-center">✕</button>
+                      <button 
+                        type="button" 
+                        onClick={() => removeCropField(index)} 
+                        className="absolute -top-2 -right-2 text-red-500 hover:text-white hover:bg-red-500 text-xs bg-white border border-red-200 w-5 h-5 rounded-full flex items-center justify-center"
+                      >
+                        ×
+                      </button>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
+                    
+                    {/* Crop Name */}
+                    <div className="mb-3">
+                      <label className="block text-[10px] font-medium text-black mb-1">Crop Grown</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g., Cabbage" 
+                        className="text-black w-full text-sm px-3 py-1.5 border border-gray-200 rounded bg-white" 
+                        value={crop.cropName} 
+                        onChange={(e) => handleInputChange(index, 'cropName', e.target.value)} 
+                      />
+                    </div>
+
+                    {/* Period */}
+                    <div className="mb-3">
+                      <label className="block text-[10px] font-medium text-black mb-1">Growing Period</label>
+                      <div className="flex items-center gap-1">
+                        <select 
+                          required 
+                          className="text-black flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white" 
+                          value={crop.startMonth} 
+                          onChange={(e) => handleInputChange(index, 'startMonth', e.target.value)}
+                        >
+                          <option value="" disabled>Month</option>
+                          {MONTHS.map(m => <option key={m} value={m}>{m.substring(0, 3)}</option>)}
+                        </select>
+                        <select 
+                          required 
+                          className="text-black w-16 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white" 
+                          value={crop.startYear} 
+                          onChange={(e) => handleInputChange(index, 'startYear', e.target.value)}
+                        >
+                          <option value="" disabled>Year</option>
+                          {YEARS.map(y => <option key={y} value={y}>{y.substring(2)}</option>)}
+                        </select>
+                        <span className="text-gray-400 text-xs">→</span>
+                        <select 
+                          required 
+                          className="text-black flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white" 
+                          value={crop.endMonth} 
+                          onChange={(e) => handleInputChange(index, 'endMonth', e.target.value)}
+                        >
+                          <option value="" disabled>Month</option>
+                          {MONTHS.map(m => <option key={m} value={m}>{m.substring(0, 3)}</option>)}
+                        </select>
+                        <select 
+                          required 
+                          className="text-black w-16 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white" 
+                          value={crop.endYear} 
+                          onChange={(e) => handleInputChange(index, 'endYear', e.target.value)}
+                        >
+                          <option value="" disabled>Year</option>
+                          {YEARS.map(y => <option key={y} value={y}>{y.substring(2)}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Inputs */}
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Crop Grown</label>
-                        <input type="text" required placeholder="e.g., Cabbage" className="text-black w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50" value={crop.cropName} onChange={(e) => handleInputChange(index, 'cropName', e.target.value)} />
+                        <label className="block text-[10px] font-medium text-black mb-1">Fertilizers</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g., Urea" 
+                          className="text-black w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white" 
+                          value={crop.fertilizers} 
+                          onChange={(e) => handleInputChange(index, 'fertilizers', e.target.value)} 
+                        />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Time Period</label>
-                        <div className="flex items-center gap-2">
-                          <select required className="text-black flex-1 px-2 py-2 border border-gray-200 rounded-xl bg-gray-50 text-xs" value={crop.startMonth} onChange={(e) => handleInputChange(index, 'startMonth', e.target.value)}><option value="" disabled>Mo</option>{MONTHS.map(m => <option key={m} value={m}>{m.substring(0, 3)}</option>)}</select>
-                          <select required className="text-black flex-1 px-2 py-2 border border-gray-200 rounded-xl bg-gray-50 text-xs" value={crop.startYear} onChange={(e) => handleInputChange(index, 'startYear', e.target.value)}><option value="" disabled>Yr</option>{YEARS.map(y => <option key={y} value={y}>{y.substring(2)}</option>)}</select>
-                          <span className="text-gray-400 font-bold px-1">to</span>
-                          <select required className="text-black flex-1 px-2 py-2 border border-gray-200 rounded-xl bg-gray-50 text-xs" value={crop.endMonth} onChange={(e) => handleInputChange(index, 'endMonth', e.target.value)}><option value="" disabled>Mo</option>{MONTHS.map(m => <option key={m} value={m}>{m.substring(0, 3)}</option>)}</select>
-                          <select required className="text-black flex-1 px-2 py-2 border border-gray-200 rounded-xl bg-gray-50 text-xs" value={crop.endYear} onChange={(e) => handleInputChange(index, 'endYear', e.target.value)}><option value="" disabled>Yr</option>{YEARS.map(y => <option key={y} value={y}>{y.substring(2)}</option>)}</select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Fertilizers Used</label>
-                        <input type="text" placeholder="e.g., Urea, Compost" className="text-black w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50" value={crop.fertilizers} onChange={(e) => handleInputChange(index, 'fertilizers', e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Pesticides Used</label>
-                        <input type="text" placeholder="e.g., Neem oil" className="text-black w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50" value={crop.pesticides} onChange={(e) => handleInputChange(index, 'pesticides', e.target.value)} />
+                        <label className="block text-[10px] font-medium text-black mb-1">Pesticides</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g., Neem oil" 
+                          className="text-black w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white" 
+                          value={crop.pesticides} 
+                          onChange={(e) => handleInputChange(index, 'pesticides', e.target.value)} 
+                        />
                       </div>
                     </div>
                   </div>
                 ))}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
-                  <button type="button" onClick={addCropField} className="w-full sm:w-auto text-xs font-extrabold text-green-700 bg-green-100 hover:bg-green-200 px-5 py-3 rounded-xl transition-colors shadow-sm">+ ADD PAST CROP</button>
-                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                    <select value={language} onChange={(e) => setLanguage(e.target.value)} className="px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-700 text-sm font-bold shadow-sm">
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={addCropField} 
+                    className="text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded border border-green-200"
+                  >
+                    + Add Past Crop
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <select 
+                      value={language} 
+                      onChange={(e) => setLanguage(e.target.value)} 
+                      className="text-xs px-3 py-2 border border-gray-300 rounded bg-white"
+                    >
                       <option value="English">English</option>
-                      <option value="Sinhala">සිංහල (Sinhala)</option>
+                      <option value="Sinhala">සිංහල</option>
                     </select>
-                    <button type="submit" disabled={loading} className="w-full sm:w-auto px-8 py-3 border border-transparent text-sm font-extrabold rounded-xl shadow-md text-white bg-green-600 hover:bg-green-700 disabled:bg-green-300 transition-all uppercase">{loading ? 'Analyzing...' : 'Run ML Analysis'}</button>
+                    <button 
+                      type="submit" 
+                      disabled={loading} 
+                      className="px-5 py-2 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:bg-green-300"
+                    >
+                      {loading ? 'Analyzing...' : 'Run Analysis'}
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </form>
 
-          {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl shadow-sm"><p className="text-red-700 font-bold text-sm">{error}</p></div>}
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 p-3 rounded">
+              <p className="text-xs text-red-700">{error}</p>
+            </div>
+          )}
 
+          {/* Results */}
           {evaluation && (
-            <div className="space-y-6 animate-fade-in-up">
+            <div className="space-y-4">
 
               {/* Suitability Banner */}
-              <div className={`p-6 rounded-3xl shadow-md border-l-8 ${evaluation.targetEvaluation.isSuitable ? 'border-green-500 bg-green-50/30' : 'border-red-500 bg-red-50/30'}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-extrabold text-gray-800">Target Crop Suitability</h3>
-                  <span className={`px-4 py-2 rounded-xl text-xs uppercase tracking-widest font-extrabold text-white shadow-sm ${evaluation.targetEvaluation.isSuitable ? 'bg-green-500' : 'bg-red-500'}`}>
+              <div className={`p-4 rounded-lg border ${evaluation.targetEvaluation.isSuitable ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-800">Target Crop Suitability</h3>
+                  <span className={`text-xs px-2 py-1 rounded font-medium ${
+                    evaluation.targetEvaluation.isSuitable ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                  }`}>
                     {evaluation.targetEvaluation.isSuitable ? 'SUITABLE' : 'NOT RECOMMENDED'}
                   </span>
                 </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mt-2">
-                  <h4 className="text-xs font-extrabold text-gray-500 mb-2 uppercase tracking-wider">Analysis Feedback:</h4>
-                  <ul className="list-disc list-inside space-y-2 text-gray-700 text-sm font-medium">
+                <div className="bg-white p-3 rounded border border-gray-100">
+                  <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
                     {evaluation.targetEvaluation.feedback.map((point, idx) => (
                       <li key={idx}>{point}</li>
                     ))}
@@ -228,36 +325,33 @@ export default function RotationPlanPage() {
                 </div>
               </div>
 
-              {/* Display Baseline & Impact Side-by-Side */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Target Crop Requirements */}
-                <div className="bg-white shadow-md rounded-3xl overflow-hidden border border-gray-100">
-                  <div className="p-5 bg-indigo-50 border-b border-indigo-100">
-                    <h3 className="text-sm font-extrabold text-indigo-900 uppercase tracking-wider">Target Crop Needs</h3>
-                    <p className="text-xs text-indigo-600 mt-1">Minimum nutrients required to grow {targetCrop}.</p>
+              {/* Requirements & Impact */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Requirements */}
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="p-2 bg-indigo-50 border-b border-indigo-100">
+                    <h3 className="text-xs font-medium text-indigo-800">Target Needs</h3>
                   </div>
-                  <div className="p-6 grid grid-cols-3 gap-2">
+                  <div className="p-3">
                     {evaluation.graphData.map((item, idx) => (
-                      <div key={idx} className="text-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="block text-[10px] font-bold text-gray-500 uppercase">{item.name.split(' ')[0]}</span>
-                        <span className="block text-lg font-black text-gray-800 mt-1">{item.Required}</span>
+                      <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0">
+                        <span className="text-[10px] text-gray-500">{item.name}</span>
+                        <span className="text-xs font-medium text-gray-800">{item.Required}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* History Impact */}
-                <div className="bg-white shadow-md rounded-3xl overflow-hidden border border-gray-100">
-                  <div className="p-5 bg-amber-50 border-b border-amber-100">
-                    <h3 className="text-sm font-extrabold text-amber-900 uppercase tracking-wider">Historical Impact</h3>
-                    <p className="text-xs text-amber-700 mt-1">Calculated nutrient change from history.</p>
+                {/* Impact */}
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="p-2 bg-amber-50 border-b border-amber-100">
+                    <h3 className="text-xs font-medium text-amber-800">History Impact</h3>
                   </div>
-                  <div className="p-6 grid grid-cols-3 gap-2">
+                  <div className="p-3">
                     {evaluation.historyImpact.map((item, idx) => (
-                      <div key={idx} className="text-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="block text-[10px] font-bold text-gray-500 uppercase">{item.nutrient.split(' ')[0]}</span>
-                        <span className={`block text-lg font-black mt-1 ${item.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0">
+                        <span className="text-[10px] text-gray-500">{item.nutrient}</span>
+                        <span className={`text-xs font-medium ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {item.change > 0 ? '+' : ''}{item.change}
                         </span>
                       </div>
@@ -266,77 +360,66 @@ export default function RotationPlanPage() {
                 </div>
               </div>
 
-              {/* Data Visualization Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Visual Graph Section */}
-                <div className="bg-white p-6 rounded-3xl shadow-md border border-gray-100 flex flex-col">
-                  <h3 className="text-sm font-extrabold text-gray-800 mb-6 uppercase tracking-wider">Current vs Required Nutrients</h3>
-                  <div className="flex-1 w-full h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={evaluation.graphData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-                        <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                        <Bar dataKey="Required" name="Required (Target)" fill="#94A3B8" radius={[4, 4, 0, 0]} barSize={30} />
-                        <Bar dataKey="Current" name="Current (Actual)" fill="#10B981" radius={[4, 4, 0, 0]} barSize={30} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Problem / Solution Tables */}
-                <div className="bg-white shadow-md rounded-3xl overflow-hidden border border-gray-100 flex flex-col">
-                  <div className="p-6 bg-gray-50 border-b border-gray-100">
-                     <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">Required Actions</h3>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col justify-center">
-                    {evaluation.requiredNutrients.length > 0 ? (
-                      <div className="space-y-4">
-                        {evaluation.requiredNutrients.map((req, idx) => (
-                          <div key={idx} className={`p-4 rounded-2xl border ${req.amount.includes('Add') ? 'bg-amber-50 border-amber-100' : 'bg-blue-50 border-blue-100'}`}>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="font-extrabold text-sm text-gray-800">{req.nutrient}</span>
-                              <span className={`text-xs font-bold px-2 py-1 rounded-lg ${req.amount.includes('Add') ? 'bg-amber-200 text-amber-800' : 'bg-blue-200 text-blue-800'}`}>
-                                {req.amount}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-600 font-medium mt-2">
-                              <span className="font-bold text-gray-500 uppercase tracking-wider text-[10px]">Action: </span>{req.recommendedSource}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center p-8 bg-green-50 rounded-2xl border border-green-100">
-                        <span className="text-4xl block mb-2">🌱</span>
-                        <h4 className="text-green-800 font-bold">Soil is perfectly balanced!</h4>
-                        <p className="text-xs text-green-600 mt-1">No additional actions required for this crop.</p>
-                      </div>
-                    )}
-                  </div>
+              {/* Chart */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="text-xs font-medium text-gray-700 mb-3">Current vs Required Nutrients</h3>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={evaluation.graphData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ fontSize: '10px' }} />
+                      <Legend wrapperStyle={{ fontSize: '10px' }} />
+                      <Bar dataKey="Required" fill="#9CA3AF" radius={[2, 2, 0, 0]} barSize={20} />
+                      <Bar dataKey="Current" fill="#10B981" radius={[2, 2, 0, 0]} barSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Alternatives Section */}
-              {!evaluation.targetEvaluation.isSuitable && (
-                <div className="bg-blue-50/50 shadow-md rounded-3xl p-6 border border-blue-100">
-                  <h3 className="text-sm font-extrabold text-blue-900 mb-4 uppercase tracking-wider">Recommended Alternatives</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {evaluation.alternativeSuggestions.map((item, idx) => (
-                      <div key={idx} className="bg-white rounded-2xl p-5 shadow-sm border border-blue-50">
-                        <h4 className="text-sm font-extrabold text-blue-800 mb-2">{item.cropName}</h4>
-                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-1 font-medium">
-                          {item.reasons.map((reason, i) => (<li key={i} className="leading-relaxed">{reason}</li>))}
-                        </ul>
+              {/* Required Actions */}
+              {evaluation.requiredNutrients.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="p-2 bg-gray-50 border-b border-gray-200">
+                    <h3 className="text-xs font-medium text-gray-700">Required Actions</h3>
+                  </div>
+                  <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {evaluation.requiredNutrients.map((req, idx) => (
+                      <div key={idx} className={`p-2 rounded border ${req.amount.includes('Add') ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-medium text-gray-800">{req.nutrient}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                            req.amount.includes('Add') ? 'bg-amber-200 text-amber-800' : 'bg-blue-200 text-blue-800'
+                          }`}>
+                            {req.amount}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-600">{req.recommendedSource}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Alternatives */}
+              {!evaluation.targetEvaluation.isSuitable && evaluation.alternativeSuggestions.length > 0 && (
+                <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
+                  <h3 className="text-xs font-medium text-blue-800 mb-2">Recommended Alternatives</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {evaluation.alternativeSuggestions.map((item, idx) => (
+                      <div key={idx} className="bg-white p-2 rounded border border-blue-100">
+                        <h4 className="text-xs font-medium text-blue-800 mb-1">{item.cropName}</h4>
+                        <ul className="text-[9px] text-gray-600 list-disc list-inside">
+                          {item.reasons.map((reason, i) => (
+                            <li key={i} className="leading-tight">{reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
