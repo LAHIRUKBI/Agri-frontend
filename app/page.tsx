@@ -23,7 +23,7 @@ export default function Home() {
           Agri Supporter
         </h1>
         <p className="text-gray-600 text-lg">
-          Redirecting to sign up...
+          Redirecting...
         </p>
         <div className="mt-8">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-600 border-r-transparent"></div>
