@@ -10,11 +10,16 @@ const DISTRICTS = [
   "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya"
 ];
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June", 
+  "July", "August", "September", "October", "November", "December"
+];
+
 export default function CultivationPage() {
   const [district, setDistrict] = useState('');
   const [language, setLanguage] = useState('English');
   const [currentDate, setCurrentDate] = useState('');
-  const [currentMonth, setCurrentMonth] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(''); // NEW: Replaced static currentMonth with selectedMonth
   const [loading, setLoading] = useState(false);
   const [crops, setCrops] = useState<any[]>([]);
   const [selectedCrop, setSelectedCrop] = useState<any>(null);
@@ -25,10 +30,8 @@ export default function CultivationPage() {
 
   useEffect(() => {
     const d = new Date();
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    
     setCurrentDate(d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
-    setCurrentMonth(monthNames[d.getMonth()]);
+    setSelectedMonth(MONTHS[d.getMonth()]); // Default to the actual current month on load
 
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
@@ -41,6 +44,8 @@ export default function CultivationPage() {
 
   const handleProcess = async () => {
     if (!district) return alert('Please select a district.');
+    if (!selectedMonth) return alert('Please select a target month.');
+    
     setLoading(true);
     setSelectedCrop(null);
     
@@ -48,7 +53,8 @@ export default function CultivationPage() {
       const res = await fetch('http://localhost:5000/api/guidance/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ district, date: currentDate, month: currentMonth, language })
+        // NEW: Pass selectedMonth instead of currentMonth
+        body: JSON.stringify({ district, date: currentDate, month: selectedMonth, language }) 
       });
       
       const result = await res.json();
@@ -113,7 +119,7 @@ export default function CultivationPage() {
       <main className="flex-1 p-6 max-w-7xl mx-auto space-y-8">
         <div className="border-b pb-4">
           <h1 className="text-3xl font-bold text-green-800">Cultivation Guidance & Recommendation</h1>
-          <p className="text-gray-600 mt-2">Get AI-powered, stage-by-stage cultivation plans tailored to your district and the current season.</p>
+          <p className="text-gray-600 mt-2">Get AI-powered, stage-by-stage cultivation plans tailored to your district and chosen season.</p>
         </div>
         
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-5 items-end">
@@ -129,14 +135,20 @@ export default function CultivationPage() {
             </select>
           </div>
 
+          {/* NEW: Target Month Dropdown instead of Disabled Date Input */}
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Detected Date</label>
-            <input 
-              type="text" 
-              value={currentDate} 
-              disabled 
-              className="w-full border border-gray-200 p-2.5 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed" 
-            />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Target Month / Season</label>
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)} 
+              className="text-black w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+            >
+              {MONTHS.map(m => (
+                <option key={m} value={m}>
+                  {m} {m === MONTHS[new Date().getMonth()] ? '(Current)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex-1 min-w-[200px]">
@@ -162,7 +174,7 @@ export default function CultivationPage() {
 
         {crops.length > 0 && !selectedCrop && (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-800">Recommended Crops for {district} ({currentMonth})</h2>
+            <h2 className="text-xl font-bold text-gray-800">Recommended Crops for {district} ({selectedMonth})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {crops.map((crop, idx) => (
                 <div key={idx} className="bg-white p-5 rounded-xl border border-green-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full">
