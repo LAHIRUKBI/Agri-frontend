@@ -301,9 +301,6 @@ export default function CultivationViewPage() {
 
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <h1 className="text-xl font-semibold text-gray-800">My Cultivation Journey</h1>
-            <p className="text-xs text-gray-500 mt-1 max-w-2xl">
-              Track your active crops, watch the live countdown, and manage cultivation stages.
-            </p>
           </div>
 
           <div>
@@ -404,7 +401,7 @@ export default function CultivationViewPage() {
                               ) : (
                                 isCompleted ? (
                                   <div className="text-center py-4">
-                                    <h4 className="text-lg font-bold text-green-800 mb-1">🎉 Harvest Time!</h4>
+                                    <h4 className="text-lg font-bold text-green-800 mb-1">Harvest Time!</h4>
                                     <p className="text-sm text-gray-600">You have successfully completed all stages for this crop.</p>
                                   </div>
                                 ) : (
