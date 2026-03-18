@@ -388,14 +388,13 @@ export default function CultivationViewPage() {
                                 <div className="flex flex-col md:flex-row items-center justify-between gap-3">
                                   <div>
                                     <h4 className="text-sm font-semibold text-gray-800">Ready to plant?</h4>
-                                    <p className="text-xs text-gray-500">Start the tracker to begin your live digital countdown.</p>
                                   </div>
                                   <button
                                     onClick={() => handleStartTracking(cultivation._id)}
                                     disabled={isStarting === cultivation._id}
                                     className="w-full md:w-auto bg-green-600 text-white font-bold py-2 px-5 rounded-md hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50"
                                   >
-                                    {isStarting === cultivation._id ? 'Starting...' : '🚀 Start Tracking'}
+                                    {isStarting === cultivation._id ? 'Starting...' : 'Start Tracking'}
                                   </button>
                                 </div>
                               ) : (
@@ -422,7 +421,7 @@ export default function CultivationViewPage() {
                                           disabled={isAdvancing === cultivation._id}
                                           className="w-full bg-white border-2 border-green-600 text-green-700 font-bold py-2 px-4 rounded-md hover:bg-green-50 transition-colors disabled:opacity-50"
                                         >
-                                          {isAdvancing === cultivation._id ? 'Updating...' : 'Complete Step Now ✓'}
+                                          {isAdvancing === cultivation._id ? 'Updating...' : 'Complete Step Now'}
                                         </button>
                                       </div>
                                     </div>
