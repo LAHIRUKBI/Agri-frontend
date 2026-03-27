@@ -16,14 +16,17 @@ interface PastCropDetails {
 }
 
 interface EvaluationResult {
-  soilCondition: { status: string; details: string[]; };
-  targetEvaluation: { isSuitable: boolean; feedback: string[]; };
-  alternativeSuggestions: { cropName: string; reasons: string[]; }[];
-  baselineNutrients: { nutrient: string; level: number; }[];
-  historyImpact: { nutrient: string; change: number; }[];
-  graphData: { name: string; Current: number; Required: number; }[];
-  soilNutrientLevels: { nutrient: string; level: string; depletionPrediction: string; }[];
-  requiredNutrients: { nutrient: string; recommendedSource: string; amount: string; }[];
+  targetEvaluation: { 
+    isSuitable: boolean; 
+    feedback: string[]; 
+    aiSoilRemedy: string; 
+  };
+  soilNutrientLevels: { 
+    nutrient: string; 
+    level: string; 
+    depletionPrediction: string; 
+    difference: number; 
+  }[];
 }
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -41,7 +44,6 @@ export default function RotationPlanPage() {
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   
-  // State to hold the Initial Soil Configuration
   const [initialSoilData, setInitialSoilData] = useState<any>(null);
 
   useEffect(() => {
@@ -50,7 +52,6 @@ export default function RotationPlanPage() {
     const userStr = localStorage.getItem('user');
     if (userStr) setUser(JSON.parse(userStr));
 
-    // Fetch Baseline Soil Data on Load
     const fetchSoilData = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/nutrients');
@@ -89,8 +90,10 @@ export default function RotationPlanPage() {
         body: JSON.stringify({ targetCrop, currentMonth: currentDate, previousCrops: pastCrops, language }),
       });
 
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed to get rotation plan');
-      setEvaluation(await res.json());
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to get rotation plan');
+      
+      setEvaluation(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -98,19 +101,30 @@ export default function RotationPlanPage() {
     }
   };
 
+  // 2. අලුත් දත්ත මත පදනම්ව Chart එකට අවශ්‍ය Data ජනනය කර ගැනීම
+  const chartData = evaluation?.soilNutrientLevels.map(item => {
+    const currentVal = parseFloat(item.level); // "50 ppm" -> 50
+    // Required = Current - Difference
+    const requiredVal = Number((currentVal - item.difference).toFixed(2));
+    
+    return {
+      name: item.nutrient.split(' ')[0], // "Nitrogen (N)" -> "Nitrogen"
+      Current: currentVal,
+      Required: requiredVal > 0 ? requiredVal : 0 // සෘණ අගයන් වළක්වා ගැනීම
+    };
+  }) || [];
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <FarmerSidebar user={user} />
       <main className="flex-1 overflow-y-auto py-6 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto space-y-4">
           
-          {/* Header - Smaller */}
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h1 className="text-xl font-semibold text-green-800">crop Rotation & Soil Evaluator</h1>
+            <h1 className="text-xl font-semibold text-green-800">Crop Rotation & Soil Evaluator</h1>
             <p className="text-xs text-gray-500 mt-1">Analyze historical data for nutrient predictions and planting suggestions</p>
           </div>
 
-          {/* Initial Soil Configuration - Compact */}
           {initialSoilData && (
             <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
               <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
@@ -141,9 +155,7 @@ export default function RotationPlanPage() {
             </div>
           )}
 
-          {/* Form - More Compact */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Target Crop */}
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-2 bg-green-600">
                 <h2 className="text-xs font-semibold text-white">1. Target Crop</h2>
@@ -163,7 +175,6 @@ export default function RotationPlanPage() {
               </div>
             </div>
 
-            {/* Historical Crops */}
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-2 bg-green-50 border-b border-gray-200">
                 <h2 className="text-xs font-semibold text-green-800">2. Historical Crop Timeline</h2>
@@ -181,7 +192,6 @@ export default function RotationPlanPage() {
                       </button>
                     )}
                     
-                    {/* Crop Name */}
                     <div className="mb-3">
                       <label className="block text-[10px] font-medium text-black mb-1">Crop Grown</label>
                       <input 
@@ -194,7 +204,6 @@ export default function RotationPlanPage() {
                       />
                     </div>
 
-                    {/* Period */}
                     <div className="mb-3">
                       <label className="block text-[10px] font-medium text-black mb-1">Growing Period</label>
                       <div className="flex items-center gap-1">
@@ -238,7 +247,6 @@ export default function RotationPlanPage() {
                       </div>
                     </div>
 
-                    {/* Inputs */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[10px] font-medium text-black mb-1">Fertilizers</label>
@@ -264,7 +272,6 @@ export default function RotationPlanPage() {
                   </div>
                 ))}
 
-                {/* Actions */}
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
                   <button 
                     type="button" 
@@ -277,7 +284,7 @@ export default function RotationPlanPage() {
                     <select 
                       value={language} 
                       onChange={(e) => setLanguage(e.target.value)} 
-                      className="text-xs px-3 py-2 border border-gray-300 rounded bg-white"
+                      className="text-xs px-3 py-2 border border-gray-300 rounded bg-white text-black"
                     >
                       <option value="English">English</option>
                       <option value="Sinhala">සිංහල</option>
@@ -295,18 +302,16 @@ export default function RotationPlanPage() {
             </div>
           </form>
 
-          {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 p-3 rounded">
               <p className="text-xs text-red-700">{error}</p>
             </div>
           )}
 
-          {/* Results */}
           {evaluation && (
             <div className="space-y-4">
 
-              {/* Suitability Banner */}
+              {/* 3. Suitability Banner & AI Remedy Section */}
               <div className={`p-4 rounded-lg border ${evaluation.targetEvaluation.isSuitable ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-800">Target Crop Suitability</h3>
@@ -316,110 +321,67 @@ export default function RotationPlanPage() {
                     {evaluation.targetEvaluation.isSuitable ? 'SUITABLE' : 'NOT RECOMMENDED'}
                   </span>
                 </div>
-                <div className="bg-white p-3 rounded border border-gray-100">
-                  <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
-                    {evaluation.targetEvaluation.feedback.map((point, idx) => (
-                      <li key={idx}>{point}</li>
-                    ))}
-                  </ul>
+                
+                {/* AI Remedy Message */}
+                <div className="mt-3 bg-white p-4 rounded border border-gray-200 shadow-sm">
+                  <h4 className="text-xs font-semibold mb-2 flex items-center gap-1 text-blue-700">
+                    ✨ AI Soil Preparation Guide
+                  </h4>
+                  <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+                    {evaluation.targetEvaluation.aiSoilRemedy}
+                  </p>
                 </div>
               </div>
 
-              {/* Requirements & Impact */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Requirements */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 4. Soil Nutrient Status Table */}
                 <div className="bg-white rounded-lg border border-gray-200">
-                  <div className="p-2 bg-indigo-50 border-b border-indigo-100">
-                    <h3 className="text-xs font-medium text-indigo-800">Target Needs</h3>
+                  <div className="p-3 bg-indigo-50 border-b border-indigo-100">
+                    <h3 className="text-xs font-medium text-indigo-800">Soil Nutrient Status</h3>
                   </div>
-                  <div className="p-3">
-                    {evaluation.graphData.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0">
-                        <span className="text-[10px] text-gray-500">{item.name}</span>
-                        <span className="text-xs font-medium text-gray-800">{item.Required}</span>
-                      </div>
-                    ))}
+                  <div className="p-0">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="p-2 text-[10px] font-semibold text-gray-600">Nutrient</th>
+                          <th className="p-2 text-[10px] font-semibold text-gray-600">Current Level</th>
+                          <th className="p-2 text-[10px] font-semibold text-gray-600">Difference</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {evaluation.soilNutrientLevels.map((item, idx) => (
+                          <tr key={idx} className="border-b border-gray-100 last:border-0">
+                            <td className="p-2 text-xs text-gray-800 font-medium">{item.nutrient}</td>
+                            <td className="p-2 text-xs text-gray-600">{item.level}</td>
+                            <td className={`p-2 text-xs font-medium ${item.difference >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {item.difference > 0 ? '+' : ''}{item.difference.toFixed(2)} ppm
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
-                {/* Impact */}
-                <div className="bg-white rounded-lg border border-gray-200">
-                  <div className="p-2 bg-amber-50 border-b border-amber-100">
-                    <h3 className="text-xs font-medium text-amber-800">History Impact</h3>
-                  </div>
-                  <div className="p-3">
-                    {evaluation.historyImpact.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0">
-                        <span className="text-[10px] text-gray-500">{item.nutrient}</span>
-                        <span className={`text-xs font-medium ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {item.change > 0 ? '+' : ''}{item.change}
-                        </span>
-                      </div>
-                    ))}
+                {/* 5. Chart */}
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h3 className="text-xs font-medium text-gray-700 mb-3">Current vs Required Nutrients</h3>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ fontSize: '10px', borderRadius: '4px' }} />
+                        <Legend wrapperStyle={{ fontSize: '10px' }} />
+                        <Bar dataKey="Required" fill="#9CA3AF" radius={[2, 2, 0, 0]} barSize={20} />
+                        <Bar dataKey="Current" fill="#10B981" radius={[2, 2, 0, 0]} barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>
 
-              {/* Chart */}
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <h3 className="text-xs font-medium text-gray-700 mb-3">Current vs Required Nutrients</h3>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={evaluation.graphData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ fontSize: '10px' }} />
-                      <Legend wrapperStyle={{ fontSize: '10px' }} />
-                      <Bar dataKey="Required" fill="#9CA3AF" radius={[2, 2, 0, 0]} barSize={20} />
-                      <Bar dataKey="Current" fill="#10B981" radius={[2, 2, 0, 0]} barSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Required Actions */}
-              {evaluation.requiredNutrients.length > 0 && (
-                <div className="bg-white rounded-lg border border-gray-200">
-                  <div className="p-2 bg-gray-50 border-b border-gray-200">
-                    <h3 className="text-xs font-medium text-gray-700">Required Actions</h3>
-                  </div>
-                  <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {evaluation.requiredNutrients.map((req, idx) => (
-                      <div key={idx} className={`p-2 rounded border ${req.amount.includes('Add') ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-medium text-gray-800">{req.nutrient}</span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                            req.amount.includes('Add') ? 'bg-amber-200 text-amber-800' : 'bg-blue-200 text-blue-800'
-                          }`}>
-                            {req.amount}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-gray-600">{req.recommendedSource}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Alternatives */}
-              {!evaluation.targetEvaluation.isSuitable && evaluation.alternativeSuggestions.length > 0 && (
-                <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
-                  <h3 className="text-xs font-medium text-blue-800 mb-2">Recommended Alternatives</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {evaluation.alternativeSuggestions.map((item, idx) => (
-                      <div key={idx} className="bg-white p-2 rounded border border-blue-100">
-                        <h4 className="text-xs font-medium text-blue-800 mb-1">{item.cropName}</h4>
-                        <ul className="text-[9px] text-gray-600 list-disc list-inside">
-                          {item.reasons.map((reason, i) => (
-                            <li key={i} className="leading-tight">{reason}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
