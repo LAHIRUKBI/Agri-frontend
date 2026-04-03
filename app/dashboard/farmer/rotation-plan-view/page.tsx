@@ -29,20 +29,21 @@ interface RotationPlan {
   targetCrop: string;
   currentMonth: string;
   pastCrops: PastCrop[];
-  soilCondition: {
+  soilCondition?: {
     status: string;
     details: string[];
   };
-  targetEvaluation: {
+  targetEvaluation?: {
     isSuitable: boolean;
     feedback: string[];
+    aiSoilRemedy?: string;
   };
-  alternativeSuggestions: {
+  alternativeSuggestions?: {
     cropName: string;
     reasons: string[];
   }[];
   soilNutrientLevels: SoilNutrientLevel[];
-  requiredNutrients: RequiredNutrient[];
+  requiredNutrients?: RequiredNutrient[];
   createdAt: string;
 }
 
@@ -161,7 +162,7 @@ export default function RotationPlansPage() {
     });
   };
 
-  const getSuitabilityBadge = (isSuitable: boolean) => {
+  const getSuitabilityBadge = (isSuitable?: boolean) => {
     return isSuitable ? (
       <span className="px-2 py-1 text-[10px] font-bold bg-green-100 text-green-700 rounded-full border border-green-200">
         Suitable
@@ -272,7 +273,7 @@ export default function RotationPlansPage() {
                   <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-white">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-bold text-gray-800 text-base">{plan.targetCrop}</h3>
-                      {getSuitabilityBadge(plan.targetEvaluation.isSuitable)}
+                      {getSuitabilityBadge(plan.targetEvaluation?.isSuitable)}
                     </div>
                     <p className="text-xs text-gray-500 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,12 +289,12 @@ export default function RotationPlansPage() {
                     <div className="mb-3">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Past Crops</p>
                       <div className="flex flex-wrap gap-1">
-                        {plan.pastCrops.slice(0, 2).map((crop, idx) => (
+                        {plan.pastCrops?.slice(0, 2).map((crop, idx) => (
                           <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[9px] font-medium">
                             {crop.cropName}
                           </span>
                         ))}
-                        {plan.pastCrops.length > 2 && (
+                        {plan.pastCrops?.length > 2 && (
                           <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[9px] font-medium">
                             +{plan.pastCrops.length - 2} more
                           </span>
@@ -304,7 +305,9 @@ export default function RotationPlansPage() {
                     {/* Soil Status */}
                     <div className="mb-3">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Soil Health</p>
-                      <p className="text-xs font-medium text-gray-700 line-clamp-1">{plan.soilCondition.status}</p>
+                      <p className="text-xs font-medium text-gray-700 line-clamp-1">
+                        {plan.soilCondition?.status || plan.targetEvaluation?.aiSoilRemedy || "Evaluation Complete"}
+                      </p>
                     </div>
 
                     {/* Nutrient Summary */}
@@ -396,35 +399,39 @@ export default function RotationPlansPage() {
                       <h3 className="text-2xl font-bold text-gray-800">{selectedPlan.targetCrop}</h3>
                       <p className="text-sm text-gray-500">{selectedPlan.currentMonth}</p>
                     </div>
-                    {getSuitabilityBadge(selectedPlan.targetEvaluation.isSuitable)}
+                    {getSuitabilityBadge(selectedPlan.targetEvaluation?.isSuitable)}
                   </div>
 
                   {/* Suitability Feedback */}
-                  <div className={`bg-${selectedPlan.targetEvaluation.isSuitable ? 'green' : 'red'}-50 rounded-xl p-4 border border-${selectedPlan.targetEvaluation.isSuitable ? 'green' : 'red'}-200`}>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Feedback</h4>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                      {selectedPlan.targetEvaluation.feedback.map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
+                  {selectedPlan.targetEvaluation && (
+                    <div className={`bg-${selectedPlan.targetEvaluation.isSuitable ? 'green' : 'red'}-50 rounded-xl p-4 border border-${selectedPlan.targetEvaluation.isSuitable ? 'green' : 'red'}-200`}>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Feedback</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                        {selectedPlan.targetEvaluation.feedback?.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                  {/* Soil Condition */}
-                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Soil Health Status</h4>
-                    <p className="text-sm font-semibold text-amber-800 mb-2">{selectedPlan.soilCondition.status}</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                      {selectedPlan.soilCondition.details.map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
+                  {/* Soil Condition  */}
+                  {selectedPlan.soilCondition && (
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Soil Health Status</h4>
+                      <p className="text-sm font-semibold text-amber-800 mb-2">{selectedPlan.soilCondition.status}</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                        {selectedPlan.soilCondition.details?.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Past Crops */}
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Past Crops History</h4>
                     <div className="space-y-3">
-                      {selectedPlan.pastCrops.map((crop, idx) => (
+                      {selectedPlan.pastCrops?.map((crop, idx) => (
                         <div key={idx} className="bg-white rounded-lg p-3 border border-gray-100">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-semibold text-gray-800">{crop.cropName}</span>
@@ -499,7 +506,7 @@ export default function RotationPlansPage() {
                   )}
 
                   {/* Alternatives */}
-                  {!selectedPlan.targetEvaluation.isSuitable && selectedPlan.alternativeSuggestions.length > 0 && (
+                  {!selectedPlan.targetEvaluation?.isSuitable && selectedPlan.alternativeSuggestions && selectedPlan.alternativeSuggestions.length > 0 && (
                     <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                       <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Recommended Alternatives</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
