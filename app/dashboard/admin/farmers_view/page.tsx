@@ -44,8 +44,6 @@ export default function FarmersViewPage() {
 
             const data = await response.json();
 
-            setFarmers(data.data);
-
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to fetch farmers');
             }
@@ -58,6 +56,39 @@ export default function FarmersViewPage() {
             setError(err instanceof Error ? err.message : 'Failed to load farmers');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // New Function to handle farmer deletion
+    const deleteFarmer = async (farmerId: string) => {
+        if (!window.confirm("Are you sure you want to delete this farmer? This action cannot be undone.")) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+            const response = await fetch(`${API_URL}/users/${farmerId}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to delete farmer');
+            }
+
+            // Update the state to remove the deleted farmer from UI
+            setFarmers(farmers.filter(farmer => farmer._id !== farmerId));
+            alert("Farmer deleted successfully.");
+
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert(err instanceof Error ? err.message : 'Failed to delete farmer');
         }
     };
 
@@ -241,11 +272,12 @@ export default function FarmersViewPage() {
                                                 </td>
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <button className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
-                                                            View
-                                                        </button>
-                                                        <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors">
-                                                            Contact
+                                                        {/* Replaced View and Contact buttons with Delete button */}
+                                                        <button 
+                                                            onClick={() => deleteFarmer(farmer._id)}
+                                                            className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors font-semibold"
+                                                        >
+                                                            Delete
                                                         </button>
                                                     </div>
                                                 </td>
