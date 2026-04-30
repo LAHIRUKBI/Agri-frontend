@@ -10,8 +10,12 @@ type RecommendationPayload = {
   district: string;
   price_rs_kg: number;
   horizon: number;
+  harvest_input_mode: 'range' | 'exact';
   quantity_kg: number;
-  quantity_range_label: string;
+  quantity_min_kg?: number;
+  quantity_max_kg?: number;
+  quantity_range_label?: string;
+  exact_quantity_kg?: number;
 };
 
 type FarmerUser = {
@@ -43,11 +47,18 @@ export default function FarmerPredictionPage() {
     setResult(null);
     setSubmittedInput(payload);
 
+    const requestBody = {
+      crop: payload.crop,
+      district: payload.district,
+      price_rs_kg: payload.price_rs_kg,
+      horizon: payload.horizon,
+    };
+
     try {
       const response = await fetch(`${API_BASE}/api/recommend-market`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestBody),
       });
 
       const data = (await response.json()) as ApiResponse;
@@ -56,7 +67,15 @@ export default function FarmerPredictionPage() {
         throw new Error(data?.message || 'Failed to get recommendation');
       }
 
-      setResult(data);
+      setResult({
+        ...data,
+        input: {
+          ...(typeof data === 'object' && data && 'input' in data
+            ? (data.input as Record<string, unknown>)
+            : {}),
+          ...payload,
+        },
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -79,7 +98,7 @@ export default function FarmerPredictionPage() {
 
       <main className="flex-1 p-6">
         <h1 className="mb-4 text-3xl font-bold text-green-700">
-          Smart Market Recommendation
+          Sri lankan Market Intelligence Engine - Crop Selling Recommendation
         </h1>
 
         <RecommendationForm onSubmit={handleSubmit} loading={loading} />

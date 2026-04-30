@@ -1,3 +1,4 @@
+
 'use client';
 
 type MarketLike =
@@ -38,10 +39,23 @@ type SubmittedInput = {
   crop?: string;
   district?: string;
   price_rs_kg?: number;
+  harvest_input_mode?: 'range' | 'exact';
   quantity_kg?: number;
+  quantity_min_kg?: number;
+  quantity_max_kg?: number;
   quantity_range_label?: string;
+  exact_quantity_kg?: number;
   horizon?: number;
 } | null;
+
+type AiInsights = {
+  recommendation: string;
+  prediction_summary: string;
+  price_movement: string;
+  prediction_strength: string;
+  why_this_matters: string;
+  suggested_action: string;
+};
 
 type RecommendationData = {
   prediction?: string;
@@ -55,6 +69,7 @@ type RecommendationData = {
   comparison_note?: string | null;
   comparison_strength?: string;
   is_close_call?: boolean;
+  ai_insights?: AiInsights | null;
   input?: SubmittedInput;
 };
 
@@ -63,6 +78,8 @@ type Props = {
   loading?: boolean;
   submittedInput?: SubmittedInput;
 };
+
+const MODEL_ACCURACY_LABEL = '70%';
 
 export default function RecommendationResult({
   result,
@@ -98,6 +115,11 @@ export default function RecommendationResult({
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+  const districtNameRaw = submittedInput?.district || input?.district || 'your district';
+  const districtName = String(districtNameRaw)
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 
   const toNumber = (value: unknown): number | null => {
     if (typeof value === 'number' && !Number.isNaN(value)) return value;
@@ -118,6 +140,26 @@ export default function RecommendationResult({
     // 0.52 -> 52, 52 stays 52
     if (parsed >= 0 && parsed <= 1) return parsed * 100;
     return parsed;
+  };
+
+  const getPredictionConfidence = (value: number | null) => {
+    if (value === null) return null;
+    if (value < 60) return 'Low';
+    if (value < 75) return 'Moderate';
+    return 'Strong';
+  };
+
+  const formatMlPercent = (value: number | null) => {
+    if (value === null) return 'Not available';
+    return `${value.toFixed(2)}%`;
+  };
+
+  const getHorizonLabel = (value: number | undefined) => {
+    if (value === 1) return 'Next Week';
+    if (value === 2) return '2 Weeks Ahead';
+    if (value === 3) return '3 Weeks Ahead';
+    if (value === 4) return '4 Weeks Ahead';
+    return 'Selected Forecast Period';
   };
 
   const getMarketName = (market: MarketLike) => {
@@ -286,16 +328,61 @@ export default function RecommendationResult({
   const summaryPrediction = extractPrediction();
   const summaryProbability = extractConfidence(summaryPrediction);
 
+  const mlUpProbability =
+    best_predicted_market && typeof best_predicted_market !== 'string'
+      ? normalizePercent(best_predicted_market.up_probability)
+      : null;
+  const mlDownProbability =
+    best_predicted_market && typeof best_predicted_market !== 'string'
+      ? normalizePercent(best_predicted_market.down_probability)
+      : null;
+  const hasMlPrediction =
+    mlUpProbability !== null && mlDownProbability !== null;
+  const mlDirection = hasMlPrediction
+    ? mlUpProbability >= mlDownProbability
+      ? 'UP'
+      : 'DOWN'
+    : null;
+  const mlHighestProbability = hasMlPrediction
+    ? Math.max(mlUpProbability, mlDownProbability)
+    : null;
+  const mlConfidenceLabel = getPredictionConfidence(mlHighestProbability);
+  const mlHorizonLabel = getHorizonLabel(input?.horizon);
+  const mlPeriodText =
+    input?.horizon === 1 ? 'next week' : 'over the selected forecast period';
+  const mlSupportingText =
+    mlDirection === 'UP'
+      ? `Market price is expected to increase ${mlPeriodText} based on historical patterns.`
+      : mlDirection === 'DOWN'
+      ? `Market price is expected to decrease ${mlPeriodText} based on historical patterns.`
+      : 'Market direction is unavailable for the selected forecast period.';
+
   const price = Number(
     submittedInput?.price_rs_kg ?? input?.price_rs_kg ?? 0
   );
   const quantity = Number(
     submittedInput?.quantity_kg ?? input?.quantity_kg ?? 0
   );
+  const harvestInputMode =
+    submittedInput?.harvest_input_mode ||
+    input?.harvest_input_mode ||
+    'range';
+  const quantityMin = Number(
+    submittedInput?.quantity_min_kg ?? input?.quantity_min_kg ?? quantity
+  );
+  const quantityMax = Number(
+    submittedInput?.quantity_max_kg ?? input?.quantity_max_kg ?? quantity
+  );
+  const exactQuantity = Number(
+    submittedInput?.exact_quantity_kg ?? input?.exact_quantity_kg ?? quantity
+  );
   const quantityRangeLabel =
     submittedInput?.quantity_range_label || input?.quantity_range_label || '';
 
   const currentRevenue = price * quantity;
+  const rangeMinRevenue = price * quantityMin;
+  const rangeMaxRevenue = price * quantityMax;
+  const exactRevenue = price * exactQuantity;
 
   let summaryChangeRate = 0;
   if (summaryPrediction === 'UP') summaryChangeRate = 0.02;
@@ -315,13 +402,16 @@ export default function RecommendationResult({
     return marketPrice * (1 + rate) * quantity;
   };
 
-  const nearestNowRevenue = nearest_market
-    ? getMarketCurrentPrice(nearest_market) * quantity
-    : 0;
+  const getMarketEstimatedPrice = (market: MarketLike) => {
+    const marketPrice = getMarketCurrentPrice(market);
+    const marketPrediction = getMarketPrediction(market);
 
-  const bestNowRevenue = best_market
-    ? getMarketCurrentPrice(best_market) * quantity
-    : 0;
+    let rate = 0;
+    if (marketPrediction === 'UP') rate = 0.02;
+    else if (marketPrediction === 'DOWN') rate = -0.02;
+
+    return marketPrice * (1 + rate);
+  };
 
   const nearestNextRevenue = nearest_market
     ? getMarketPredictedRevenue(nearest_market)
@@ -341,12 +431,17 @@ export default function RecommendationResult({
   const formatCurrency = (value: number) =>
     `Rs. ${Math.round(Math.abs(value)).toLocaleString()}`;
 
+  const formatUnsignedCurrency = (value: number) =>
+    `Rs. ${Math.round(value).toLocaleString()}`;
+
   const formatSignedCurrency = (value: number) => {
     if (!isMeaningfulDifference(value)) return formatCurrency(0);
     return `${value > 0 ? '+' : '-'}${formatCurrency(value)}`;
   };
 
   const formatPricePerKg = (value: number) => `${formatCurrency(value)}/kg`;
+
+  const exactFormulaText = `${formatUnsignedCurrency(price)} x ${exactQuantity.toLocaleString()} kg = ${formatUnsignedCurrency(exactRevenue)}`;
 
   const formatPercent = (value: number | null) =>
     typeof value === 'number' ? `${value.toFixed(2)}%` : 'Not available';
@@ -401,6 +496,11 @@ export default function RecommendationResult({
     return `${cropName} market outlook is available below.`;
   };
 
+  const getAiText = (field: keyof AiInsights, fallback: string) => {
+    const value = recommendation.ai_insights?.[field];
+    return typeof value === 'string' && value.trim() ? value : fallback;
+  };
+
   const getSellTimingMessage = () => {
     if (!isMeaningfulDifference(difference)) {
       return 'Selling now or waiting one week shows a similar return.';
@@ -413,56 +513,6 @@ export default function RecommendationResult({
     return `Selling now may avoid a possible loss of ${formatCurrency(difference)}.`;
   };
 
-  const getBestMarketNote = () => {
-    const nearestName = getMarketName(nearest_market);
-    const bestName = getMarketName(best_market);
-
-    if (
-      nearestName !== '-' &&
-      bestName !== '-' &&
-      !isMeaningfulDifference(bestVsNearest)
-    ) {
-      return 'Expected return is similar to the nearest market, so travel time and transport cost should guide the decision.';
-    }
-
-    if (bestVsNearest > 0) {
-      return `Estimated to return around ${formatCurrency(bestVsNearest)} more than ${nearestName}.`;
-    }
-
-    if (bestVsNearest < 0) {
-      return `Estimated return is lower than ${nearestName}; review travel and selling costs before choosing it.`;
-    }
-
-    return 'Compare transport cost and selling convenience before choosing this market.';
-  };
-
-  const getDifferenceTone = () => {
-    if (!isMeaningfulDifference(bestVsNearest)) {
-      return {
-        box: 'border-gray-200 bg-gray-50',
-        label: 'text-gray-600',
-        value: 'text-gray-800',
-        text: 'No meaningful difference',
-      };
-    }
-
-    if (bestVsNearest > 0) {
-      return {
-        box: 'border-green-200 bg-green-50',
-        label: 'text-green-700',
-        value: 'text-green-800',
-        text: formatSignedCurrency(bestVsNearest),
-      };
-    }
-
-    return {
-      box: 'border-red-200 bg-red-50',
-      label: 'text-red-700',
-      value: 'text-red-800',
-      text: formatSignedCurrency(bestVsNearest),
-    };
-  };
-
   const quickStatTone =
     isMeaningfulDifference(difference) && difference > 0
       ? 'text-green-700'
@@ -470,21 +520,129 @@ export default function RecommendationResult({
       ? 'text-red-700'
       : 'text-gray-700';
 
-  const differenceTone = getDifferenceTone();
+  const recommendationSubtext = `Based on historical patterns, mapped market comparison, and the current wholesale price entered for ${cropName}.`;
+  const whyThisMattersFallback =
+    'Small price changes can create meaningful revenue differences in wholesale selling.';
+  const nearestMarketName = getMarketName(nearest_market);
+  const bestMarketName = getMarketName(best_market);
+  const hasNearestMarket = nearest_market && nearestMarketName !== '-';
+  const hasBestMarket = best_market && bestMarketName !== '-';
+  const sameRecommendedMarket =
+    hasNearestMarket &&
+    hasBestMarket &&
+    nearestMarketName.toLowerCase() === bestMarketName.toLowerCase();
+  const bestHasMeaningfulAdvantage =
+    hasNearestMarket &&
+    hasBestMarket &&
+    !sameRecommendedMarket &&
+    bestVsNearest > 0 &&
+    isMeaningfulDifference(bestVsNearest);
+  const marketsAreClose =
+    hasNearestMarket &&
+    hasBestMarket &&
+    !sameRecommendedMarket &&
+    !isMeaningfulDifference(bestVsNearest);
+  const recommendedMarket = bestHasMeaningfulAdvantage
+    ? best_market
+    : nearest_market || best_market;
+  const otherMarket =
+    recommendedMarket === best_market ? nearest_market : best_market;
+  const recommendedMarketName = getMarketName(recommendedMarket);
+  const otherMarketName = getMarketName(otherMarket);
+  const recommendedCurrentPrice = getMarketCurrentPrice(recommendedMarket);
+  const recommendedEstimatedPrice = getMarketEstimatedPrice(recommendedMarket);
+  const recommendedEstimatedValue = getMarketPredictedRevenue(recommendedMarket);
+  const estimatedPriceLabel =
+    input?.horizon === 1
+      ? 'Next Week AI Estimated Price'
+      : input?.horizon && input.horizon > 1
+      ? `${input.horizon} Weeks Ahead Estimated Price`
+      : 'Future Estimated Price';
+  const otherEstimatedValue = otherMarket
+    ? getMarketPredictedRevenue(otherMarket)
+    : 0;
+  const trendText =
+    summaryPrediction === 'UP'
+      ? 'an upward'
+      : summaryPrediction === 'DOWN'
+      ? 'a downward'
+      : 'an uncertain';
+  const recommendedReason = bestHasMeaningfulAdvantage
+    ? 'Better estimated return based on the model signal'
+    : marketsAreClose || sameRecommendedMarket
+    ? 'Markets are close. The nearest market may be the safer practical option.'
+    : 'Higher practical return + lower transport risk';
+  const marketSummaryText = `${recommendedMarketName} Market is recommended for ${cropName} in ${districtName}.`;
+  const marketSummaryDetail = bestHasMeaningfulAdvantage
+    ? `The model predicts ${trendText} trend, and this market gives the better estimated return. Transport cost should still be considered.`
+    : marketsAreClose
+    ? 'Markets are close. The nearest market may be the safer practical option.'
+    : `The model predicts ${trendText} trend, and this market gives the better practical return.`;
+  const otherMarketNote = bestHasMeaningfulAdvantage
+    ? `${otherMarketName} was checked as the nearest market. The recommended market may give a better estimated return, but transport cost should still be considered.`
+    : `${otherMarketName} was checked, but it did not give a better practical return.`;
+  const otherMarketTone = bestHasMeaningfulAdvantage
+    ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
+    : marketsAreClose
+    ? 'border-gray-200 bg-gray-50 text-gray-700'
+    : bestVsNearest < 0
+    ? 'border-red-200 bg-red-50 text-red-700'
+    : 'border-gray-200 bg-gray-50 text-gray-700';
 
   return (
     <div className="mt-6 space-y-6">
+      {/* ML Prediction Output */}
+      <div className="rounded-2xl border border-green-100 border-l-4 border-l-green-600 bg-green-50/60 p-5 shadow-sm">
+        <p className="text-sm font-medium text-green-800">
+          AI Market Intelligence Engine Output
+        </p>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.95fr)] lg:items-center">
+          <div>
+            <div className="flex flex-wrap items-center gap-4">
+              <span
+                className={`inline-flex items-center rounded-full px-4 py-2 text-base font-bold ${
+                  mlDirection === 'DOWN'
+                    ? 'bg-red-100 text-red-700'
+                    : mlDirection === 'UP'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {mlDirection === 'DOWN' ? '↓ DOWN' : mlDirection === 'UP' ? '↑ UP' : '-'}
+              </span>
+              <span className="text-4xl font-extrabold tracking-tight text-gray-900">
+                {mlHighestProbability === null
+                  ? 'Probability unavailable'
+                  : formatMlPercent(mlHighestProbability)}
+              </span>
+            </div>
+
+            <p className="mt-3 text-base font-medium text-gray-600">
+              {mlConfidenceLabel
+                ? `${mlConfidenceLabel} Confidence | ${mlHorizonLabel} | RF Model (~${MODEL_ACCURACY_LABEL} Accuracy)`
+                : `${mlHorizonLabel} | RF Model (~${MODEL_ACCURACY_LABEL} Accuracy)`}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-green-200 bg-white/80 px-4 py-3 shadow-sm">
+            <p className="text-base font-semibold leading-6 text-gray-800 md:text-lg">
+              {mlSupportingText}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Recommendation Banner */}
       <div className="rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
           Recommendation
         </p>
         <h2 className="mt-2 text-2xl font-bold text-gray-900">
-          {getRecommendationMessage()}
+          {getAiText('recommendation', getRecommendationMessage())}
         </h2>
         <p className="mt-2 text-sm leading-6 text-gray-700">
-          Based on historical patterns, mapped market comparison, and the
-          current wholesale price entered for {cropName}.
+          {getAiText('suggested_action', recommendationSubtext)}
         </p>
       </div>
 
@@ -493,17 +651,40 @@ export default function RecommendationResult({
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-gray-600">{cropName}</p>
           <p className="mt-2 text-2xl font-bold text-gray-900">
-            {quantityRangeLabel || '-'}
+            {harvestInputMode === 'exact'
+              ? `${exactQuantity.toLocaleString()} kg`
+              : quantityRangeLabel || '-'}
           </p>
-          <p className="mt-1 text-sm text-gray-500">Quantity range used</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {harvestInputMode === 'exact'
+              ? 'Exact harvest quantity'
+              : 'Quantity range used'}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">Sell Now Value</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">
-            {formatCurrency(currentRevenue)}
+          <p className="text-sm font-medium text-gray-600">
+            {harvestInputMode === 'exact'
+              ? 'Sell Now Value'
+              : 'Estimated Sell Now Range'}
           </p>
-          <p className="mt-1 text-sm text-gray-500">Using current entered price</p>
+          {harvestInputMode === 'exact' ? (
+            <>
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {formatCurrency(exactRevenue)}
+              </p>
+              <p className="mt-1 text-sm text-gray-500">{exactFormulaText}</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {formatCurrency(rangeMinRevenue)} - {formatCurrency(rangeMaxRevenue)}
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                Most likely estimate: {formatCurrency(currentRevenue)}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -541,7 +722,7 @@ export default function RecommendationResult({
             Sell now vs next week
           </p>
           <p className="mt-1 text-lg font-bold text-gray-900">
-            {getSellTimingMessage()}
+            {getAiText('prediction_summary', getSellTimingMessage())}
           </p>
         </div>
 
@@ -551,7 +732,10 @@ export default function RecommendationResult({
               Expected Price Movement
             </p>
             <p className="mt-2 text-xl font-bold text-gray-900">
-              {getPredictionLabel(summaryPrediction)}
+              {getAiText(
+                'price_movement',
+                getPredictionLabel(summaryPrediction)
+              )}
             </p>
           </div>
 
@@ -560,135 +744,124 @@ export default function RecommendationResult({
               Prediction Strength
             </p>
             <p className="mt-2 text-xl font-bold text-gray-900">
-              {formatPredictionStrength(summaryProbability)}
+              {getAiText(
+                'prediction_strength',
+                formatPredictionStrength(summaryProbability)
+              )}
             </p>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
             <p className="text-sm font-medium text-gray-600">Why this matters</p>
             <p className="mt-2 text-base font-semibold text-gray-900">
-              Small price changes can create meaningful revenue differences in
-              wholesale selling.
+              {getAiText('why_this_matters', whyThisMattersFallback)}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Market Cards */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {nearest_market && (
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-wide text-pink-600">
-              Nearest Market
-            </p>
-            <h4 className="mt-2 text-3xl font-bold text-gray-900">
-              {getMarketName(nearest_market)}
-            </h4>
-
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-sm font-medium text-gray-600">Current Price</p>
-                <p className="mt-1 text-xl font-bold text-gray-900">
-                  {formatPricePerKg(getMarketCurrentPrice(nearest_market))}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-sm font-medium text-gray-600">Sell Now Value</p>
-                <p className="mt-1 text-xl font-bold text-gray-900">
-                  {formatCurrency(nearestNowRevenue)}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-sm font-medium text-gray-600">
-                  Next Week Estimate
-                </p>
-                <p className="mt-1 text-xl font-bold text-gray-900">
-                  {formatCurrency(nearestNextRevenue)}
-                </p>
-              </div>
-            </div>
-
-            <p className="mt-4 text-sm leading-6 text-gray-700">
-              Practical option with lower travel risk and simpler transport planning.
-            </p>
-
-            {getMarketHistoryLabel(nearest_market) && (
-              <p
-                className={`mt-3 text-sm font-medium ${
-                  isWeakMarketHistory(nearest_market)
-                    ? 'text-amber-700'
-                    : 'text-green-700'
-                }`}
-              >
-                {getMarketHistoryLabel(nearest_market)}
-              </p>
-            )}
-          </div>
-        )}
-
-        {best_market && (
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      {/* Market Recommendation */}
+      {recommendedMarket && (
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
-              Best Predicted Market
+              Market Decision Summary
+            </p>
+            <h3 className="mt-2 text-2xl font-bold text-gray-900">
+              {marketSummaryText}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              {marketSummaryDetail}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-green-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-wide text-green-700">
+              AI Market Intelligence Engine Analysis
             </p>
             <h4 className="mt-2 text-3xl font-bold text-gray-900">
-              {getMarketName(best_market)}
+              {recommendedMarketName}
             </h4>
 
             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-sm font-medium text-gray-600">Current Price</p>
-                <p className="mt-1 text-xl font-bold text-gray-900">
-                  {formatPricePerKg(getMarketCurrentPrice(best_market))}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-sm font-medium text-gray-600">Sell Now Value</p>
-                <p className="mt-1 text-xl font-bold text-gray-900">
-                  {formatCurrency(bestNowRevenue)}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="rounded-xl border border-green-100 bg-green-50 p-4">
                 <p className="text-sm font-medium text-gray-600">
-                  Next Week Estimate
+                  AI Estimated Today&apos;s Price
                 </p>
                 <p className="mt-1 text-xl font-bold text-gray-900">
-                  {formatCurrency(bestNextRevenue)}
+                  {formatPricePerKg(recommendedCurrentPrice)}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-green-100 bg-green-50 p-4">
+                <p className="text-sm font-medium text-gray-600">
+                  {estimatedPriceLabel}
+                </p>
+                <p className="mt-1 text-xl font-bold text-gray-900">
+                  {formatPricePerKg(recommendedEstimatedPrice)}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-green-100 bg-green-50 p-4">
+                <p className="text-sm font-medium text-gray-600">
+                 AI Estimated Selling Value
+                </p>
+                <p className="mt-1 text-xl font-bold text-green-800">
+                  {formatCurrency(recommendedEstimatedValue)}
                 </p>
               </div>
             </div>
 
-            <p className="mt-4 text-sm leading-6 text-gray-700">
-              {getBestMarketNote()}
-            </p>
+            <div className="mt-4 rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+              <p className="text-sm font-medium text-green-800">Reason</p>
+              <p className="mt-1 text-base font-semibold text-gray-900">
+                {recommendedReason}
+              </p>
+            </div>
 
-            {getMarketHistoryLabel(best_market) && (
+            {getMarketHistoryLabel(recommendedMarket) && (
               <p
                 className={`mt-3 text-sm font-medium ${
-                  isWeakMarketHistory(best_market)
+                  isWeakMarketHistory(recommendedMarket)
                     ? 'text-amber-700'
                     : 'text-green-700'
                 }`}
               >
-                {getMarketHistoryLabel(best_market)}
+                {getMarketHistoryLabel(recommendedMarket)}
               </p>
             )}
-
-            <div className={`mt-4 rounded-xl border p-4 ${differenceTone.box}`}>
-              <p className={`text-sm font-medium ${differenceTone.label}`}>
-                Difference vs Nearest Market
-              </p>
-              <p className={`mt-1 text-xl font-bold ${differenceTone.value}`}>
-                {differenceTone.text}
-              </p>
-            </div>
           </div>
-        )}
-      </div>
+
+          {otherMarket &&
+            otherMarketName !== '-' &&
+            otherMarketName.toLowerCase() !== recommendedMarketName.toLowerCase() && (
+              <div className={`rounded-2xl border p-5 shadow-sm ${otherMarketTone}`}>
+                <p className="text-sm font-semibold uppercase tracking-wide">
+                  Other Markets Checked By AI
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">
+                      {otherMarketName}
+                    </p>
+                    <p className="mt-1 text-sm leading-6">{otherMarketNote}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/70 bg-white/70 px-4 py-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                     AI Estimated Value Today
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">
+                      {formatCurrency(otherEstimatedValue)}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Difference: {formatSignedCurrency(bestVsNearest)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+        </div>
+      )}
 
       {/* Bottom Note */}
       <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
