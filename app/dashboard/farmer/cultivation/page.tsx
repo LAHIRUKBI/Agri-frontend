@@ -28,6 +28,7 @@ export default function CultivationPage() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [addSuccess, setAddSuccess] = useState(false);
+  const [pageError, setPageError] = useState('');
 
   useEffect(() => {
     const d = new Date();
@@ -50,6 +51,7 @@ export default function CultivationPage() {
     setLoading(true);
     setSelectedCrop(null);
     setCrops([]);
+    setPageError('');
 
     try {
       const res = await fetch('http://localhost:5000/api/guidance/recommend', {
@@ -58,6 +60,10 @@ export default function CultivationPage() {
         body: JSON.stringify({ district, date: currentDate, month: selectedMonth, language })
       });
 
+      if (!res.ok) {
+        throw new Error('Could not reach the backend recommendation service.');
+      }
+
       const result = await res.json();
       if (result.success) {
         setCrops(result.data);
@@ -65,8 +71,7 @@ export default function CultivationPage() {
         alert(result.message || "Failed to fetch recommendations.");
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
-      alert("Could not connect to the backend server.");
+      setPageError('Backend server is unavailable right now. Please make sure the backend is running on port 5000.');
     } finally {
       setLoading(false);
     }
@@ -81,6 +86,9 @@ export default function CultivationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cropName: crop.cropName, language })
       });
+      if (!res.ok) {
+        throw new Error('Could not load cultivation steps.');
+      }
       const data = await res.json();
       if (data.success) {
         setSelectedCrop({ ...crop, steps: data.steps });
@@ -89,8 +97,7 @@ export default function CultivationPage() {
         alert("Failed to load cultivation steps.");
       }
     } catch (error) {
-      console.error(error);
-      alert("Error connecting to server to fetch steps.");
+      setPageError('Cultivation steps could not be loaded because the backend or Python service is unavailable.');
     } finally {
       setLoadingSteps(false);
     }
@@ -130,7 +137,6 @@ export default function CultivationPage() {
         alert(result.message || "Failed to add crop to profile");
       }
     } catch (error) {
-      console.error("Error adding crop:", error);
       alert("An error occurred while communicating with the server.");
     } finally {
       setIsAdding(false);
@@ -144,6 +150,11 @@ export default function CultivationPage() {
       </aside>
 
       <main className="flex-1 p-6 max-w-7xl mx-auto space-y-8">
+        {pageError && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            {pageError}
+          </div>
+        )}
         <div className="border-b pb-4">
           <h1 className="text-3xl font-bold text-green-800">Cultivation Guidance & Recommendation</h1>
           <p className="text-gray-600 mt-2">Get AI-powered, stage-by-stage cultivation plans tailored to your district and chosen season.</p>

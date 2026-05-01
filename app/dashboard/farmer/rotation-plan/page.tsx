@@ -89,6 +89,7 @@ export default function RotationPlanPage() {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [user, setUser] = useState<any>(null);
   const [initialSoilData, setInitialSoilData] = useState<any>(null);
 
@@ -100,10 +101,13 @@ export default function RotationPlanPage() {
     const fetchSoilData = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/nutrients');
+        if (!res.ok) {
+          throw new Error('Could not load nutrient reference data.');
+        }
         const data = await res.json();
         if (data.success) setInitialSoilData(data.data);
       } catch (err) {
-        console.error("Failed to load initial soil data.");
+        setInfoMessage('Initial soil reference data could not be loaded because the backend is unavailable.');
       }
     };
     fetchSoilData();
@@ -184,6 +188,12 @@ export default function RotationPlanPage() {
             <h1 className="text-xl font-semibold text-green-800">Crop Rotation & Soil Evaluator</h1>
             <p className="text-xs text-gray-500 mt-1">Analyze historical data for nutrient predictions and planting suggestions</p>
           </div>
+
+          {infoMessage && (
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded">
+              <p className="text-xs text-amber-800">{infoMessage}</p>
+            </div>
+          )}
 
           {initialSoilData && (
             <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">

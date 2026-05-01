@@ -29,6 +29,7 @@ interface UserData {
 export default function FarmerHome() {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState('');
   const [cropSteps, setCropSteps] = useState<Record<string, any[]>>({});
   const [loadingSteps, setLoadingSteps] = useState<Record<string, boolean>>({});
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function FarmerHome() {
       setUser(userData);
       fetchUserDetails(userData.id, token);
     } catch (error) {
-      console.error('Failed to parse user data:', error);
+      setPageError('Could not read local sign-in data. Please sign in again.');
       router.push('/signin');
     } finally {
       setIsLoading(false);
@@ -81,9 +82,11 @@ export default function FarmerHome() {
             fetchCropSteps(cultivation.cropName, cultivation._id);
           });
         }
+      } else {
+        setPageError('Could not load your dashboard details from the backend.');
       }
     } catch (error) {
-      console.error('Failed to fetch user details:', error);
+      setPageError('Backend server is unavailable right now. Please make sure the backend is running on port 5000.');
     }
   };
 
@@ -97,7 +100,7 @@ export default function FarmerHome() {
         setCropSteps(prev => ({ ...prev, [cultivationId]: data.steps }));
       }
     } catch (error) {
-      console.error("Error fetching steps:", error);
+      setPageError('Python cultivation service is unavailable, so stage details could not be loaded.');
     } finally {
       setLoadingSteps(prev => ({ ...prev, [cultivationId]: false }));
     }
@@ -151,6 +154,11 @@ export default function FarmerHome() {
       
       {/* Main Content */}
       <main className="flex-1 p-6 overflow-y-auto">
+        {pageError && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            {pageError}
+          </div>
+        )}
         {/* Welcome Section - Smaller */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
