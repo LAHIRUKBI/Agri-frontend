@@ -8,6 +8,7 @@ type Props = {
     crop: string;
     district: string;
     price_rs_kg: number;
+    current_price_source: 'manual' | 'system';
     horizon: number;
     harvest_input_mode: 'range' | 'exact';
     quantity_kg: number;
@@ -90,6 +91,7 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
     crop: '',
     district: '',
     price_rs_kg: '',
+    current_price_source: 'manual' as 'manual' | 'system',
     harvest_input_mode: 'range' as 'range' | 'exact',
     quantity_range_label: '',
     exact_quantity_kg: '',
@@ -137,7 +139,10 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
   const validateForm = () => {
     if (!form.crop) return 'Please select a crop';
     if (!form.district) return 'Please select a district';
-    if (!form.price_rs_kg || Number(form.price_rs_kg) <= 0) {
+    if (
+      form.current_price_source === 'manual' &&
+      (!form.price_rs_kg || Number(form.price_rs_kg) <= 0)
+    ) {
       return 'Price must be greater than 0';
     }
     if (form.harvest_input_mode === 'range' && !form.quantity_range_label) {
@@ -170,11 +175,13 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
     setLocalError('');
 
     const exactQuantity = Number(form.exact_quantity_kg);
+    const requestPrice = Number(form.price_rs_kg) > 0 ? Number(form.price_rs_kg) : 1;
 
     onSubmit({
       crop: form.crop,
       district: form.district,
-      price_rs_kg: Number(form.price_rs_kg),
+      price_rs_kg: requestPrice,
+      current_price_source: form.current_price_source,
       horizon,
       harvest_input_mode: form.harvest_input_mode,
       quantity_kg:
@@ -206,6 +213,37 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
   return (
     <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="mb-3 text-sm font-semibold text-gray-700">
+            Current Price Source
+          </p>
+
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                type="radio"
+                name="current_price_source"
+                value="manual"
+                checked={form.current_price_source === 'manual'}
+                onChange={handleChange}
+                className="h-4 w-4 accent-green-600"
+              />
+              I know today&apos;s selling price
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                type="radio"
+                name="current_price_source"
+                value="system"
+                checked={form.current_price_source === 'system'}
+                onChange={handleChange}
+                className="h-4 w-4 accent-green-600"
+              />
+              Use system current market price
+            </label>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
             <label className="mb-2 block text-sm font-semibold text-gray-700">
@@ -261,19 +299,21 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
             </select>
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">
-              Current Price (Rs/kg)
-            </label>
-            <input
-              type="number"
-              name="price_rs_kg"
-              value={form.price_rs_kg}
-              onChange={handleChange}
-              placeholder="120"
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base text-gray-800 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500"
-            />
-          </div>
+          {form.current_price_source === 'manual' && (
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-gray-700">
+                Current Price (Rs/kg)
+              </label>
+              <input
+                type="number"
+                name="price_rs_kg"
+                value={form.price_rs_kg}
+                onChange={handleChange}
+                placeholder="120"
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base text-gray-800 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          )}
 
         </div>
 
@@ -378,7 +418,7 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
             )}
           </p>
 
-          {Number(form.price_rs_kg) > 1500 && (
+          {form.current_price_source === 'manual' && Number(form.price_rs_kg) > 1500 && (
             <p className="mt-2 text-sm text-orange-800">
               ⚠ This price is unusually high. Predictions may be less reliable
               under extreme market conditions.

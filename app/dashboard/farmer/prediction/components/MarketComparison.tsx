@@ -39,7 +39,7 @@ export default function MarketComparison({ comparisons }: Props) {
                 {formatLabel(item.market)}
               </p>
               <p className="text-sm text-gray-500">
-                Prediction: {item.prediction}
+                Direction Model Signal: {item.prediction}
               </p>
             </div>
 
