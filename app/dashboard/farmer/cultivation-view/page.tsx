@@ -86,6 +86,7 @@ const DigitalCountdown = ({ targetDate, onExpire }: { targetDate: Date, onExpire
 export default function CultivationViewPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState('');
   const [expandedCropIndex, setExpandedCropIndex] = useState<number | null>(null);
   const [cropSteps, setCropSteps] = useState<any[]>([]);
   const [loadingSteps, setLoadingSteps] = useState(false);
@@ -114,10 +115,11 @@ export default function CultivationViewPage() {
       if (!userData.id) {
         throw new Error('User ID not found');
       }
+      setPageError('');
       setUser(userData);
       await fetchUserDetails(userData.id, token);
     } catch (error) {
-      console.error('Failed to parse user data:', error);
+      setPageError('Could not load local user details. Please sign in again.');
       router.push('/signin');
     }
   };
@@ -140,9 +142,11 @@ export default function CultivationViewPage() {
         const data = await response.json();
         setUser(prevUser => ({ ...prevUser, ...data }));
         localStorage.setItem('user', JSON.stringify({ ...JSON.parse(localStorage.getItem('user') || '{}'), ...data }));
+      } else {
+        setPageError('Could not load your cultivation profile from the server.');
       }
     } catch (error) {
-      console.error('Failed to fetch user details:', error);
+      setPageError('Backend server is unavailable right now. Please make sure the backend is running on port 5000.');
     } finally {
       setIsLoading(false);
     }
@@ -168,7 +172,6 @@ export default function CultivationViewPage() {
         alert(data.error || "Failed to load cultivation steps.");
       }
     } catch (error) {
-      console.error("Error fetching steps:", error);
       alert("Could not connect to the Python backend.");
     } finally {
       setLoadingSteps(false);
@@ -212,7 +215,6 @@ export default function CultivationViewPage() {
         alert(data.message || "Failed to delete crop");
       }
     } catch (error) {
-      console.error("Error deleting crop:", error);
       alert("Could not connect to the server.");
     } finally {
       setIsDeleting(null);
@@ -242,7 +244,6 @@ export default function CultivationViewPage() {
         alert(data.message || "Failed to start tracking");
       }
     } catch (error) {
-      console.error("Error starting tracking:", error);
       alert("Could not connect to the server.");
     } finally {
       setIsStarting(null);
@@ -272,7 +273,6 @@ export default function CultivationViewPage() {
         alert(data.message || "Failed to advance step");
       }
     } catch (error) {
-      console.error("Error advancing step:", error);
       alert("Could not connect to the server.");
     } finally {
       setIsAdvancing(null);
@@ -298,6 +298,11 @@ export default function CultivationViewPage() {
 
       <main className="flex-1 p-4 md:p-5 lg:p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto space-y-4">
+          {pageError && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+              {pageError}
+            </div>
+          )}
 
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <h1 className="text-xl font-semibold text-gray-800">My Cultivation Journey</h1>

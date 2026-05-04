@@ -42,7 +42,11 @@ export default function FarmersViewPage() {
                 }
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(response.status === 401 || response.status === 403
+                    ? 'You are not authorized to load farmers. Please sign in as an admin.'
+                    : 'Could not load farmers because the backend server is unavailable.');
+            }
 
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to fetch farmers');
@@ -52,7 +56,6 @@ export default function FarmersViewPage() {
             const farmersList = data.data.filter((user: Farmer) => user.role === 'farmer');
             setFarmers(farmersList);
         } catch (err) {
-            console.error('Fetch error:', err);
             setError(err instanceof Error ? err.message : 'Failed to load farmers');
         } finally {
             setIsLoading(false);
