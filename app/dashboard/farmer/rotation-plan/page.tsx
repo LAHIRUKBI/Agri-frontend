@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import FarmerSidebar from '@/app/navigation/farmer/page';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// අඩුවී තිබූ ChemicalItem Interface එක මෙතැනට එක් කර ඇත
 interface ChemicalItem {
   name: string;
   amount_g: number;
@@ -55,7 +54,6 @@ interface EvaluationResult {
     cropName: string;
     reasons: string[];
   }[];
-  // අලුත් Fields
   chemicalBreakdown?: ChemicalBreakdown[];
   calculatorDetails?: CalculatorDetails;
 }
@@ -77,6 +75,25 @@ const AMOUNTS = [
   { label: '2kg', value: 2000 }, { label: '5kg', value: 5000 },
   { label: '10kg', value: 10000 }
 ];
+
+// Dropdown options for fertilizers and pesticides
+const FERTILIZER_OPTIONS = ['Urea', 'TSP', 'MOP', 'NPK_15-15-15', 'Dolomite', 'Compost'];
+const PESTICIDE_OPTIONS = ['Glyphosate', 'Mancozeb', 'Chlorpyrifos', 'Imidacloprid', 'Captan'];
+
+// Helper function to format AI remedy text into short bullet points
+function formatAiRemedy(text: string): string[] {
+  if (!text) return ['No specific recommendations.'];
+  // Remove markdown bold markers
+  let cleaned = text.replace(/\*\*/g, '');
+  // Split by common delimiters: periods with space, newlines, numbered items (1., 2.), bullet points (*, -)
+  let points = cleaned.split(/(?<=\.)\s+|\.\s+|\n+|(?:\d+\.\s*)|(?:\*\s*)|(?:\-\s*)/);
+  // Filter out empty or very short strings, trim
+  points = points.map(p => p.trim()).filter(p => p.length > 0 && p !== '.');
+  // If no points, fallback to original cleaned text as single point
+  if (points.length === 0) points = [cleaned];
+  // Limit each point to reasonable length (optional: truncate very long points)
+  return points.slice(0, 8); // max 8 points for readability
+}
 
 export default function RotationPlanPage() {
   const [currentDate, setCurrentDate] = useState('');
@@ -121,7 +138,8 @@ export default function RotationPlanPage() {
 
   const handleAddChemical = (cropIndex: number, type: 'fertilizers' | 'pesticides') => {
     const updatedCrops = [...pastCrops];
-    updatedCrops[cropIndex][type].push({ name: '', amount_g: 100 });
+    const defaultName = type === 'fertilizers' ? FERTILIZER_OPTIONS[0] : PESTICIDE_OPTIONS[0];
+    updatedCrops[cropIndex][type].push({ name: defaultName, amount_g: 100 });
     setPastCrops(updatedCrops);
   };
 
@@ -292,7 +310,7 @@ export default function RotationPlanPage() {
                           <option value="" disabled>Year</option>
                           {YEARS.map(y => <option key={y} value={y}>{y.substring(2)}</option>)}
                         </select>
-                        <span className="text-gray-400 text-xs">→</span>
+                        <span className="text-gray-400 text-xs">to</span>
                         <select required className="text-black flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
                           value={crop.endMonth} onChange={(e) => handleInputChange(index, 'endMonth', e.target.value)}>
                           <option value="" disabled>Month</option>
@@ -312,8 +330,13 @@ export default function RotationPlanPage() {
                         <label className="block text-[10px] font-medium text-black mb-2">Fertilizers Applied</label>
                         {crop.fertilizers.map((fert, fIdx) => (
                           <div key={fIdx} className="flex items-center gap-2 mb-2">
-                            <input type="text" placeholder="Name (e.g., Urea)" className="text-black text-xs px-2 py-1 border rounded w-1/2"
-                              value={fert.name} onChange={(e) => handleChemicalChange(index, 'fertilizers', fIdx, 'name', e.target.value)} />
+                            <select
+                              className="text-black text-xs px-2 py-1 border rounded w-1/2"
+                              value={fert.name}
+                              onChange={(e) => handleChemicalChange(index, 'fertilizers', fIdx, 'name', e.target.value)}
+                            >
+                              {FERTILIZER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
                             <select className="text-black text-xs px-2 py-1 border rounded w-1/3"
                               value={fert.amount_g} onChange={(e) => handleChemicalChange(index, 'fertilizers', fIdx, 'amount_g', Number(e.target.value))}>
                               {AMOUNTS.map(amt => <option key={amt.value} value={amt.value}>{amt.label}</option>)}
@@ -329,8 +352,13 @@ export default function RotationPlanPage() {
                         <label className="block text-[10px] font-medium text-black mb-2">Pesticides Applied</label>
                         {crop.pesticides.map((pest, pIdx) => (
                           <div key={pIdx} className="flex items-center gap-2 mb-2">
-                            <input type="text" placeholder="Name (e.g., Captan)" className="text-black text-xs px-2 py-1 border rounded w-1/2"
-                              value={pest.name} onChange={(e) => handleChemicalChange(index, 'pesticides', pIdx, 'name', e.target.value)} />
+                            <select
+                              className="text-black text-xs px-2 py-1 border rounded w-1/2"
+                              value={pest.name}
+                              onChange={(e) => handleChemicalChange(index, 'pesticides', pIdx, 'name', e.target.value)}
+                            >
+                              {PESTICIDE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
                             <select className="text-black text-xs px-2 py-1 border rounded w-1/3"
                               value={pest.amount_g} onChange={(e) => handleChemicalChange(index, 'pesticides', pIdx, 'amount_g', Number(e.target.value))}>
                               {AMOUNTS.map(amt => <option key={amt.value} value={amt.value}>{amt.label}</option>)}
@@ -381,16 +409,22 @@ export default function RotationPlanPage() {
 
                 <div className="mt-3 bg-white p-4 rounded border border-gray-200 shadow-sm">
                   <h4 className="text-xs font-semibold mb-2 flex items-center gap-1 text-blue-700">
-                    ✨ AI Soil Preparation Guide
+                    AI Soil Preparation Guide
                   </h4>
-                  <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed mb-4">
-                    {evaluation.targetEvaluation.aiSoilRemedy}
-                  </p>
+                  {/* Render AI remedy as clean bullet points */}
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    {formatAiRemedy(evaluation.targetEvaluation.aiSoilRemedy).map((point, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-green-600 text-base leading-tight">•</span>
+                        <span className="leading-relaxed">{point}</span>
+                      </li>
+                    ))}
+                  </ul>
 
                   {!evaluation.targetEvaluation.isSuitable && evaluation.alternativeSuggestions && evaluation.alternativeSuggestions.length > 0 && (
-                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg shadow-sm">
+                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg shadow-sm mt-4">
                       <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
-                        💡 Recommended Alternatives for Current Soil
+                        Recommended Alternatives for Current Soil
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {evaluation.alternativeSuggestions.map((alt, idx) => (
@@ -401,7 +435,7 @@ export default function RotationPlanPage() {
                             <ul className="space-y-1">
                               {alt.reasons.map((reason, rIdx) => (
                                 <li key={rIdx} className="text-[11px] text-gray-700 flex items-start gap-1.5">
-                                  <span className="text-green-500 mt-0.5">✓</span>
+                                  <span className="text-green-500 mt-0.5">-</span>
                                   <span className="leading-relaxed">{reason}</span>
                                 </li>
                               ))}
@@ -462,6 +496,7 @@ export default function RotationPlanPage() {
                   </div>
                 </div>
               </div>
+
               {/* Detailed Calculation & Chemical Breakdown Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 
@@ -469,7 +504,7 @@ export default function RotationPlanPage() {
                 {evaluation.chemicalBreakdown && evaluation.chemicalBreakdown.length > 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-green-50 border-b border-green-100 flex justify-between items-center">
-                      <h3 className="text-xs font-medium text-green-800">🧪 Agrochemical N-P-K Contributions</h3>
+                      <h3 className="text-xs font-medium text-green-800">Agrochemical N-P-K Contributions</h3>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
@@ -504,7 +539,7 @@ export default function RotationPlanPage() {
                 {evaluation.calculatorDetails && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-blue-50 border-b border-blue-100">
-                      <h3 className="text-xs font-medium text-blue-800">📊 Nutrient Gap Calculation Details</h3>
+                      <h3 className="text-xs font-medium text-blue-800">Nutrient Gap Calculation Details</h3>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
@@ -547,7 +582,6 @@ export default function RotationPlanPage() {
                   </div>
                 )}
               </div>
-
             </div>
           )}
         </div>
