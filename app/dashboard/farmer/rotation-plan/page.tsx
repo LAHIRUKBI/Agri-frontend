@@ -25,6 +25,7 @@ interface CalculatorDetails {
   };
   differences: { diffN: number; diffP: number; diffK: number };
   statuses: { N: string; P: string; K: string };
+  landCalculations: { cropName: string; acres: number; sqFt: number }[];
 }
 
 interface PastCropDetails {
@@ -41,6 +42,7 @@ interface PastCropDetails {
 interface EvaluationResult {
   targetEvaluation: {
     isSuitable: boolean;
+    isFertile: boolean;
     feedback: string[];
     aiSoilRemedy: string;
   };
@@ -49,6 +51,8 @@ interface EvaluationResult {
     level: string;
     depletionPrediction: string;
     difference: number;
+    targetMin?: number; // Target Crop හි අවම සීමාව සඳහා
+    targetMax?: number; // Target Crop හි උපරිම සීමාව සඳහා
   }[];
   alternativeSuggestions?: {
     cropName: string;
@@ -76,23 +80,22 @@ const AMOUNTS = [
   { label: '10kg', value: 10000 }
 ];
 
-// Dropdown options for fertilizers and pesticides
-const FERTILIZER_OPTIONS = ['Urea', 'TSP', 'MOP', 'NPK_15-15-15', 'Dolomite', 'Compost'];
-const PESTICIDE_OPTIONS = ['Glyphosate', 'Mancozeb', 'Chlorpyrifos', 'Imidacloprid', 'Captan'];
+const FERTILIZER_OPTIONS = [
+  'Urea', 'TSP (Triple Super Phosphate)', 'MOP (Muriate of Potash)', 'NPK 15-15-15', 'Dolomite', 'Compost / Organic'
+];
+const PESTICIDE_OPTIONS = [
+  'Glyphosate 41% SL', 'Mancozeb 80% WP', 'Chlorpyrifos 50% EC', 'Imidacloprid 70% WG', 'Captan 50% WP'
+];
 
-// Helper function to format AI remedy text into short bullet points
+const SQ_FT_PER_ACRE = 43560;
+
 function formatAiRemedy(text: string): string[] {
   if (!text) return ['No specific recommendations.'];
-  // Remove markdown bold markers
   let cleaned = text.replace(/\*\*/g, '');
-  // Split by common delimiters: periods with space, newlines, numbered items (1., 2.), bullet points (*, -)
   let points = cleaned.split(/(?<=\.)\s+|\.\s+|\n+|(?:\d+\.\s*)|(?:\*\s*)|(?:\-\s*)/);
-  // Filter out empty or very short strings, trim
   points = points.map(p => p.trim()).filter(p => p.length > 0 && p !== '.');
-  // If no points, fallback to original cleaned text as single point
   if (points.length === 0) points = [cleaned];
-  // Limit each point to reasonable length (optional: truncate very long points)
-  return points.slice(0, 8); // max 8 points for readability
+  return points.slice(0, 8); 
 }
 
 export default function RotationPlanPage() {
@@ -109,6 +112,8 @@ export default function RotationPlanPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const [user, setUser] = useState<any>(null);
   const [initialSoilData, setInitialSoilData] = useState<any>(null);
+  
+  const [showAIAssistance, setShowAIAssistance] = useState(false);
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
@@ -118,9 +123,7 @@ export default function RotationPlanPage() {
     const fetchSoilData = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/nutrients');
-        if (!res.ok) {
-          throw new Error('Could not load nutrient reference data.');
-        }
+        if (!res.ok) throw new Error('Could not load nutrient reference data.');
         const data = await res.json();
         if (data.success) setInitialSoilData(data.data);
       } catch (err) {
@@ -165,7 +168,8 @@ export default function RotationPlanPage() {
       return setError('Please complete all historical details.');
     }
 
-    setLoading(true); setError(''); setEvaluation(null);
+    setLoading(true); setError(''); setEvaluation(null); 
+    setShowAIAssistance(false); 
 
     try {
       const token = localStorage.getItem('token');
@@ -204,7 +208,7 @@ export default function RotationPlanPage() {
 
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <h1 className="text-xl font-semibold text-green-800">Crop Rotation & Soil Evaluator</h1>
-            <p className="text-xs text-gray-500 mt-1">Analyze historical data for nutrient predictions and planting suggestions</p>
+            <p className="text-xs text-gray-500 mt-1">Analyze historical data for nutrient predictions per square foot and planting suggestions</p>
           </div>
 
           {infoMessage && (
@@ -217,7 +221,7 @@ export default function RotationPlanPage() {
             <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
               <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
                 <div>
-                  <h2 className="text-xs font-semibold text-blue-900">N-P-K levels in good soil</h2>
+                  <h2 className="text-xs font-semibold text-blue-900">N-P-K levels in good soil (Limits per Sq.Ft / ppm)</h2>
                   <p className="text-[10px] text-blue-700">pH: {initialSoilData.phMin} - {initialSoilData.phMax}</p>
                 </div>
               </div>
@@ -243,6 +247,7 @@ export default function RotationPlanPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-2 bg-green-600">
                 <h2 className="text-xs font-semibold text-white">1. Target Crop</h2>
@@ -255,17 +260,23 @@ export default function RotationPlanPage() {
                     className="text-black flex-1 text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-green-400 outline-none"
                     value={targetCrop} onChange={(e) => setTargetCrop(e.target.value)}
                   />
-                  <label className="text-xs font-medium text-black">Land Size:</label>
-                  <select
-                    value={targetLandSize} onChange={(e) => setTargetLandSize(Number(e.target.value))}
-                    className="text-black text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-green-400 outline-none"
-                  >
-                    {LAND_SIZES.map(size => <option key={size.value} value={size.value}>{size.label}</option>)}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-black">Land Size:</label>
+                    <select
+                      value={targetLandSize} onChange={(e) => setTargetLandSize(Number(e.target.value))}
+                      className="text-black text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-green-400 outline-none"
+                    >
+                      {LAND_SIZES.map(size => <option key={size.value} value={size.value}>{size.label}</option>)}
+                    </select>
+                    <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded">
+                      ={(targetLandSize * SQ_FT_PER_ACRE).toLocaleString()} Sq.Ft
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
+            
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-2 bg-green-50 border-b border-gray-200">
                 <h2 className="text-xs font-semibold text-green-800">2. Historical Crop Timeline</h2>
@@ -286,7 +297,7 @@ export default function RotationPlanPage() {
                           className="text-black w-full text-sm px-3 py-1.5 border border-gray-200 rounded bg-white"
                           value={crop.cropName} onChange={(e) => handleInputChange(index, 'cropName', e.target.value)} />
                       </div>
-                      <div className="w-full sm:w-32">
+                      <div className="w-full sm:w-40">
                         <label className="block text-[10px] font-medium text-black mb-1">Land Size</label>
                         <select
                           className="text-black w-full text-sm px-2 py-1.5 border border-gray-200 rounded bg-white"
@@ -294,6 +305,9 @@ export default function RotationPlanPage() {
                         >
                           {LAND_SIZES.map(size => <option key={size.value} value={size.value}>{size.label}</option>)}
                         </select>
+                        <span className="block text-[9px] text-gray-500 mt-1 font-bold">
+                          = {(crop.landSize * SQ_FT_PER_ACRE).toLocaleString()} Sq.Ft
+                        </span>
                       </div>
                     </div>
 
@@ -325,9 +339,9 @@ export default function RotationPlanPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-3 mt-3">
-                      {/* Fertilizers */}
+                      
                       <div>
-                        <label className="block text-[10px] font-medium text-black mb-2">Fertilizers Applied</label>
+                        <label className="block text-[10px] font-medium text-black mb-2">Fertilizers Applied (Total Amount)</label>
                         {crop.fertilizers.map((fert, fIdx) => (
                           <div key={fIdx} className="flex items-center gap-2 mb-2">
                             <select
@@ -347,9 +361,9 @@ export default function RotationPlanPage() {
                         <button type="button" onClick={() => handleAddChemical(index, 'fertilizers')} className="text-[10px] text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">+ Add Fertilizer</button>
                       </div>
 
-                      {/* Pesticides */}
+                      
                       <div>
-                        <label className="block text-[10px] font-medium text-black mb-2">Pesticides Applied</label>
+                        <label className="block text-[10px] font-medium text-black mb-2">Pesticides Applied (Total Amount)</label>
                         {crop.pesticides.map((pest, pIdx) => (
                           <div key={pIdx} className="flex items-center gap-2 mb-2">
                             <select
@@ -398,78 +412,107 @@ export default function RotationPlanPage() {
 
           {evaluation && (
             <div className="space-y-4">
-              {/* Suitability Banner & AI Remedy Section */}
+              
               <div className={`p-4 rounded-lg border ${evaluation.targetEvaluation.isSuitable ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-800">Target Crop Suitability</h3>
-                  <span className={`text-xs px-2 py-1 rounded font-medium ${evaluation.targetEvaluation.isSuitable ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-800">Target Crop Suitability (Per Sq.Ft Evaluation)</h3>
+                    <p className="text-[10px] mt-1 font-medium text-gray-600">
+                      Overall Soil Fertility Level: 
+                      <span className={`ml-1 px-2 py-0.5 rounded text-[10px] ${evaluation.targetEvaluation.isFertile ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {evaluation.targetEvaluation.isFertile ? 'FERTILE' : 'NEEDS IMPROVEMENT'}
+                      </span>
+                    </p>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded font-bold ${evaluation.targetEvaluation.isSuitable ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
                     {evaluation.targetEvaluation.isSuitable ? 'SUITABLE' : 'NOT RECOMMENDED'}
                   </span>
                 </div>
 
-                <div className="mt-3 bg-white p-4 rounded border border-gray-200 shadow-sm">
-                  <h4 className="text-xs font-semibold mb-2 flex items-center gap-1 text-blue-700">
-                    AI Soil Preparation Guide
-                  </h4>
-                  {/* Render AI remedy as clean bullet points */}
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    {formatAiRemedy(evaluation.targetEvaluation.aiSoilRemedy).map((point, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-green-600 text-base leading-tight">•</span>
-                        <span className="leading-relaxed">{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {!evaluation.targetEvaluation.isSuitable && evaluation.alternativeSuggestions && evaluation.alternativeSuggestions.length > 0 && (
-                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg shadow-sm mt-4">
-                      <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
-                        Recommended Alternatives for Current Soil
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {evaluation.alternativeSuggestions.map((alt, idx) => (
-                          <div key={idx} className="bg-white p-3 rounded border border-orange-100 shadow-sm">
-                            <h4 className="text-xs font-bold text-gray-800 mb-2 bg-orange-100 inline-block px-2 py-1 rounded">
-                              {alt.cropName}
-                            </h4>
-                            <ul className="space-y-1">
-                              {alt.reasons.map((reason, rIdx) => (
-                                <li key={rIdx} className="text-[11px] text-gray-700 flex items-start gap-1.5">
-                                  <span className="text-green-500 mt-0.5">-</span>
-                                  <span className="leading-relaxed">{reason}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
+                {!showAIAssistance ? (
+                  <div className="mt-4 pt-3 border-t border-gray-200/60 flex justify-center">
+                    <button
+                      onClick={() => setShowAIAssistance(true)}
+                      className="text-xs font-medium px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded shadow-sm hover:bg-blue-100 flex items-center gap-2"
+                    >
+                      Ask AI for Remedies & Alternatives
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-3 bg-white p-4 rounded border border-gray-200 shadow-sm transition-all">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-xs font-semibold flex items-center gap-1 text-blue-700">
+                        AI Soil Preparation Guide
+                      </h4>
+                      <button onClick={() => setShowAIAssistance(false)} className="text-[10px] text-gray-500 hover:text-gray-800 font-medium bg-gray-100 px-2 py-1 rounded">
+                        Close AI Data
+                      </button>
                     </div>
-                  )}
-                </div>
+                    
+                    <ul className="space-y-2 text-sm text-gray-700">
+                      {formatAiRemedy(evaluation.targetEvaluation.aiSoilRemedy).map((point, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-green-600 text-base leading-tight">•</span>
+                          <span className="leading-relaxed">{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {!evaluation.targetEvaluation.isSuitable && evaluation.alternativeSuggestions && evaluation.alternativeSuggestions.length > 0 && (
+                      <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg shadow-sm mt-4">
+                        <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                          Recommended Alternatives for Current Soil
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {evaluation.alternativeSuggestions.map((alt, idx) => (
+                            <div key={idx} className="bg-white p-3 rounded border border-orange-100 shadow-sm">
+                              <h4 className="text-xs font-bold text-gray-800 mb-2 bg-orange-100 inline-block px-2 py-1 rounded">
+                                {alt.cropName}
+                              </h4>
+                              <ul className="space-y-1">
+                                {alt.reasons.map((reason, rIdx) => (
+                                  <li key={rIdx} className="text-[11px] text-gray-700 flex items-start gap-1.5">
+                                    <span className="text-green-500 mt-0.5">-</span>
+                                    <span className="leading-relaxed">{reason}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Soil Nutrient Status Table */}
+                
                 <div className="bg-white rounded-lg border border-gray-200">
                   <div className="p-3 bg-indigo-50 border-b border-indigo-100">
-                    <h3 className="text-xs font-medium text-indigo-800">Soil Nutrient Status</h3>
+                    <h3 className="text-xs font-medium text-indigo-800">Soil Nutrient Status (Per Sq.Ft)</h3>
                   </div>
                   <div className="p-0">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-200">
                           <th className="p-2 text-[10px] font-semibold text-gray-600">Nutrient</th>
-                          <th className="p-2 text-[10px] font-semibold text-gray-600">Current Level</th>
-                          <th className="p-2 text-[10px] font-semibold text-gray-600">Difference</th>
+                          {/* අලුතින් එකතු කල තීරුව */}
+                          <th className="p-2 text-[10px] font-semibold text-blue-600 text-center">Target Crop Needs</th>
+                          <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Current Level</th>
+                          <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Difference</th>
                         </tr>
                       </thead>
                       <tbody>
                         {evaluation.soilNutrientLevels.map((item, idx) => (
-                          <tr key={idx} className="border-b border-gray-100 last:border-0">
+                          <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                             <td className="p-2 text-xs text-gray-800 font-medium">{item.nutrient}</td>
-                            <td className="p-2 text-xs text-gray-600">{item.level}</td>
-                            <td className={`p-2 text-xs font-medium ${item.difference >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                              {item.difference > 0 ? '+' : ''}{item.difference.toFixed(2)} ppm
+                            <td className="p-2 text-[11px] font-bold text-blue-700 text-center bg-blue-50/30">
+                                {item.targetMin} - {item.targetMax === 999999 ? 'No Limit' : item.targetMax} ppm
+                            </td>
+                            <td className="p-2 text-xs text-gray-600 text-center">{item.level}</td>
+                            <td className={`p-2 text-xs font-bold text-center ${item.difference >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {item.difference > 0 ? '+' : ''}{item.difference.toFixed(4)} ppm
                             </td>
                           </tr>
                         ))}
@@ -478,7 +521,7 @@ export default function RotationPlanPage() {
                   </div>
                 </div>
 
-                {/* Chart */}
+                
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                   <h3 className="text-xs font-medium text-gray-700 mb-3">Current vs Required Nutrients</h3>
                   <div className="h-48">
@@ -497,35 +540,34 @@ export default function RotationPlanPage() {
                 </div>
               </div>
 
-              {/* Detailed Calculation & Chemical Breakdown Section */}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 
-                {/* 1. Agrochemical N-P-K Contributions */}
+                
                 {evaluation.chemicalBreakdown && evaluation.chemicalBreakdown.length > 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-green-50 border-b border-green-100 flex justify-between items-center">
-                      <h3 className="text-xs font-medium text-green-800">Agrochemical N-P-K Contributions</h3>
+                      <div>
+                        <h3 className="text-xs font-medium text-green-800">Agrochemical Distribution Calculation</h3>
+                        <p className="text-[9px] text-green-700 mt-0.5">Formula: (Total Grams * Composition) / Total Sq.Feet</p>
+                      </div>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-gray-50 border-b border-gray-200">
                             <th className="p-2 text-[10px] font-semibold text-gray-600">Chemical Name</th>
-                            <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Amount</th>
-                            <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Base (per 100g)</th>
-                            <th className="p-2 text-[10px] font-semibold text-green-600 text-center">Total Added (N-P-K)</th>
+                            <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Total Amt</th>
+                            <th className="p-2 text-[10px] font-semibold text-green-600 text-center">Added to Sq.Ft (N-P-K)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {evaluation.chemicalBreakdown.map((chem, idx) => (
                             <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                               <td className="p-2 text-xs text-gray-800 font-medium">{chem.name}</td>
-                              <td className="p-2 text-xs text-gray-600 text-center">{chem.amount_g}g</td>
-                              <td className="p-2 text-[10px] text-gray-500 text-center">
-                                {chem.base_100g.N.toFixed(1)} / {chem.base_100g.P.toFixed(1)} / {chem.base_100g.K.toFixed(1)}
-                              </td>
-                              <td className="p-2 text-xs text-green-700 font-semibold text-center">
-                                +{chem.added.N.toFixed(2)} / +{chem.added.P.toFixed(2)} / +{chem.added.K.toFixed(2)}
+                              <td className="p-2 text-xs text-gray-600 text-center bg-gray-50 font-bold">{chem.amount_g}g</td>
+                              <td className="p-2 text-[10px] text-green-700 font-bold text-center bg-green-50/50">
+                                +{chem.added.N.toFixed(4)} / +{chem.added.P.toFixed(4)} / +{chem.added.K.toFixed(4)}
                               </td>
                             </tr>
                           ))}
@@ -535,49 +577,58 @@ export default function RotationPlanPage() {
                   </div>
                 )}
 
-                {/* 2. Nutrient Calculator Internal Logic */}
+                
                 {evaluation.calculatorDetails && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-blue-50 border-b border-blue-100">
-                      <h3 className="text-xs font-medium text-blue-800">Nutrient Gap Calculation Details</h3>
+                      <h3 className="text-xs font-medium text-blue-800">Calculation Logic Viewer</h3>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 border-b border-gray-200">
-                            <th className="p-2 text-[10px] font-semibold text-gray-600">Nutrient</th>
-                            <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Required (Min-Max)</th>
-                            <th className="p-2 text-[10px] font-semibold text-blue-600 text-center">Target Midpoint</th>
-                            <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {['N', 'P', 'K'].map((nut, idx) => {
-                            const req = evaluation.calculatorDetails!.requirements[nut as 'N'|'P'|'K'];
-                            const status = evaluation.calculatorDetails!.statuses[nut as 'N'|'P'|'K'];
-                            return (
-                              <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                                <td className="p-2 text-xs text-gray-800 font-bold">{nut}</td>
-                                <td className="p-2 text-xs text-gray-600 text-center">
-                                  {req.min.toFixed(1)} - {req.max === 999999 ? 'No Limit' : req.max.toFixed(1)}
-                                </td>
-                                <td className="p-2 text-xs text-blue-600 font-medium text-center">
-                                  {req.mid.toFixed(2)} ppm
-                                </td>
-                                <td className="p-2 text-xs text-center">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                                    status === 'Deficit' ? 'bg-red-100 text-red-700' : 
-                                    status === 'Surplus' ? 'bg-yellow-100 text-yellow-700' : 
-                                    'bg-green-100 text-green-700'
-                                  }`}>
-                                    {status}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                    <div className="p-3 space-y-3">
+                      <div>
+                        <h4 className="text-[10px] font-bold text-gray-700 mb-1">Land Area Conversion (1 Acre = 43,560 Sq.Ft)</h4>
+                        {evaluation.calculatorDetails.landCalculations?.map((lc, idx) => (
+                          <div key={idx} className="text-[11px] text-gray-600 flex justify-between border-b border-dashed border-gray-200 pb-1 mb-1">
+                            <span>{lc.cropName} Field Area:</span>
+                            <span className="font-bold text-gray-800">{lc.acres} Acres = {lc.sqFt.toLocaleString()} Sq.Ft</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div>
+                         <h4 className="text-[10px] font-bold text-gray-700 mb-1">Crop Specific Nutrient Gap</h4>
+                         <table className="w-full text-left border-collapse mt-1">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-200">
+                              <th className="p-1 text-[9px] font-semibold text-gray-600">Nutrient</th>
+                              <th className="p-1 text-[9px] font-semibold text-gray-600 text-center">Req (Min-Max)</th>
+                              <th className="p-1 text-[9px] font-semibold text-gray-600 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {['N', 'P', 'K'].map((nut, idx) => {
+                              const req = evaluation.calculatorDetails!.requirements[nut as 'N'|'P'|'K'];
+                              const status = evaluation.calculatorDetails!.statuses[nut as 'N'|'P'|'K'];
+                              return (
+                                <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                                  <td className="p-1 text-[11px] text-gray-800 font-bold">{nut}</td>
+                                  <td className="p-1 text-[11px] text-gray-600 text-center">
+                                    {req.min.toFixed(1)} - {req.max === 999999 ? 'No Limit' : req.max.toFixed(1)}
+                                  </td>
+                                  <td className="p-1 text-[11px] text-center">
+                                    <span className={`px-1.5 py-0.5 rounded font-bold ${
+                                      status === 'Deficit' ? 'bg-red-100 text-red-700' : 
+                                      status === 'Surplus' ? 'bg-yellow-100 text-yellow-700' : 
+                                      'bg-green-100 text-green-700'
+                                    }`}>
+                                      {status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}
