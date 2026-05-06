@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import FarmerSidebar from '@/app/navigation/farmer/page';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface ChemicalItem {
   name: string;
@@ -51,8 +49,8 @@ interface EvaluationResult {
     level: string;
     depletionPrediction: string;
     difference: number;
-    targetMin?: number; // Target Crop හි අවම සීමාව සඳහා
-    targetMax?: number; // Target Crop හි උපරිම සීමාව සඳහා
+    targetMin?: number; 
+    targetMax?: number; 
   }[];
   alternativeSuggestions?: {
     cropName: string;
@@ -87,6 +85,8 @@ const PESTICIDE_OPTIONS = [
   'Glyphosate 41% SL', 'Mancozeb 80% WP', 'Chlorpyrifos 50% EC', 'Imidacloprid 70% WG', 'Captan 50% WP'
 ];
 
+const SOIL_TYPES = ['Sandy', 'Loam', 'Clay'];
+
 const SQ_FT_PER_ACRE = 43560;
 
 function formatAiRemedy(text: string): string[] {
@@ -102,6 +102,11 @@ export default function RotationPlanPage() {
   const [currentDate, setCurrentDate] = useState('');
   const [targetCrop, setTargetCrop] = useState('');
   const [targetLandSize, setTargetLandSize] = useState<number>(1);
+  
+  const [soilType, setSoilType] = useState('Loam');
+  const [phLevel, setPhLevel] = useState<number>(6.5);
+  const [rainfall, setRainfall] = useState<number>(1500);
+
   const [language, setLanguage] = useState('English');
   const [pastCrops, setPastCrops] = useState<PastCropDetails[]>([
     { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [], pesticides: [] }
@@ -176,7 +181,16 @@ export default function RotationPlanPage() {
       const res = await fetch('http://localhost:5000/api/rotation/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ targetCrop, targetLandSize, currentMonth: currentDate, previousCrops: pastCrops, language }),
+        body: JSON.stringify({ 
+          targetCrop, 
+          targetLandSize, 
+          soilType, 
+          phLevel, 
+          rainfall, 
+          currentMonth: currentDate, 
+          previousCrops: pastCrops, 
+          language 
+        }),
       });
 
       const data = await res.json();
@@ -208,7 +222,7 @@ export default function RotationPlanPage() {
 
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <h1 className="text-xl font-semibold text-green-800">Crop Rotation & Soil Evaluator</h1>
-            <p className="text-xs text-gray-500 mt-1">Analyze historical data for nutrient predictions per square foot and planting suggestions</p>
+            <p className="text-xs text-gray-500 mt-1">Analyze historical data and environmental factors for nutrient predictions</p>
           </div>
 
           {infoMessage && (
@@ -247,7 +261,6 @@ export default function RotationPlanPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-2 bg-green-600">
                 <h2 className="text-xs font-semibold text-white">1. Target Crop</h2>
@@ -276,10 +289,50 @@ export default function RotationPlanPage() {
               </div>
             </div>
 
-            
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="px-4 py-2 bg-blue-600">
+                <h2 className="text-xs font-semibold text-white">2. Environmental Factors</h2>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-medium text-black mb-1">Soil Type</label>
+                    <select
+                      value={soilType}
+                      onChange={(e) => setSoilType(e.target.value)}
+                      className="text-black w-full text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-blue-400 outline-none"
+                    >
+                      {SOIL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-black mb-1">Soil pH Level</label>
+                    <input
+                      type="number"
+                      step="0.1" min="4.0" max="9.0" required
+                      value={phLevel}
+                      onChange={(e) => setPhLevel(Number(e.target.value))}
+                      className="text-black w-full text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-blue-400 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-black mb-1">Seasonal Rainfall (mm)</label>
+                    <input
+                      type="number"
+                      step="10" min="200" max="5000" required
+                      value={rainfall}
+                      onChange={(e) => setRainfall(Number(e.target.value))}
+                      className="text-black w-full text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-blue-400 outline-none"
+                    />
+                  </div>
+                </div>
+                <p className="text-[9px] text-gray-500 mt-2">*These factors help the Machine Learning model accurately calculate nutrient leaching and retention.</p>
+              </div>
+            </div>
+
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-2 bg-green-50 border-b border-gray-200">
-                <h2 className="text-xs font-semibold text-green-800">2. Historical Crop Timeline</h2>
+                <h2 className="text-xs font-semibold text-green-800">3. Historical Crop Timeline</h2>
               </div>
               <div className="p-4 space-y-3">
                 {pastCrops.map((crop, index) => (
@@ -339,7 +392,6 @@ export default function RotationPlanPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-3 mt-3">
-                      
                       <div>
                         <label className="block text-[10px] font-medium text-black mb-2">Fertilizers Applied (Total Amount)</label>
                         {crop.fertilizers.map((fert, fIdx) => (
@@ -360,7 +412,6 @@ export default function RotationPlanPage() {
                         ))}
                         <button type="button" onClick={() => handleAddChemical(index, 'fertilizers')} className="text-[10px] text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">+ Add Fertilizer</button>
                       </div>
-
                       
                       <div>
                         <label className="block text-[10px] font-medium text-black mb-2">Pesticides Applied (Total Amount)</label>
@@ -429,6 +480,15 @@ export default function RotationPlanPage() {
                   </span>
                 </div>
 
+                <div className="mt-3 bg-white/60 p-3 rounded border border-gray-200 shadow-sm">
+                   <h4 className="text-[10px] font-bold text-gray-700 mb-2 border-b pb-1">Environmental Impact on ML Prediction</h4>
+                   <ul className="text-[10px] text-gray-600 space-y-1">
+                     <li><span className="font-semibold text-gray-800">Soil Retention:</span> Model adjusted nutrient retention based on <b>{soilType}</b> soil characteristics.</li>
+                     <li><span className="font-semibold text-gray-800">Phosphorus Availability:</span> pH level of <b>{phLevel}</b> affected the lock/release mechanism of Phosphorus.</li>
+                     <li><span className="font-semibold text-gray-800">Nitrogen Leaching:</span> Seasonal rainfall of <b>{rainfall}mm</b> factored into Nitrogen washing rates.</li>
+                   </ul>
+                </div>
+
                 {!showAIAssistance ? (
                   <div className="mt-4 pt-3 border-t border-gray-200/60 flex justify-center">
                     <button
@@ -488,96 +548,145 @@ export default function RotationPlanPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
-                <div className="bg-white rounded-lg border border-gray-200">
-                  <div className="p-3 bg-indigo-50 border-b border-indigo-100">
-                    <h3 className="text-xs font-medium text-indigo-800">Soil Nutrient Status (Per Sq.Ft)</h3>
+                <div className="flex flex-col gap-3">
+                  <div className="bg-green-50 rounded-lg border border-green-200 p-4 flex flex-col items-center justify-center relative overflow-hidden flex-1">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-green-400"></div>
+                    <span className="text-4xl mb-2 drop-shadow-sm">🌱</span>
+                    <h3 className="text-xs font-bold text-green-900 mb-3 text-center uppercase tracking-wider">{targetCrop} (ppm)</h3>
+                    <div className="flex items-center justify-center gap-2 sm:gap-4 w-full">
+                      <div className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-green-100 text-center flex-1">
+                        <span className="block text-[10px] text-gray-500 font-semibold mb-1">Nitrogen (N)</span>
+                        <span className="text-[11px] font-bold text-blue-700">
+                          {evaluation.soilNutrientLevels[0].targetMin} - {evaluation.soilNutrientLevels[0].targetMax === 999999 ? 'No Limit' : evaluation.soilNutrientLevels[0].targetMax}
+                        </span>
+                      </div>
+                      <div className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-green-100 text-center flex-1">
+                        <span className="block text-[10px] text-gray-500 font-semibold mb-1">Phosphorus (P)</span>
+                        <span className="text-[11px] font-bold text-blue-700">
+                          {evaluation.soilNutrientLevels[1].targetMin} - {evaluation.soilNutrientLevels[1].targetMax === 999999 ? 'No Limit' : evaluation.soilNutrientLevels[1].targetMax}
+                        </span>
+                      </div>
+                      <div className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-green-100 text-center flex-1">
+                        <span className="block text-[10px] text-gray-500 font-semibold mb-1">Potassium (K)</span>
+                        <span className="text-[11px] font-bold text-blue-700">
+                          {evaluation.soilNutrientLevels[2].targetMin} - {evaluation.soilNutrientLevels[2].targetMax === 999999 ? 'No Limit' : evaluation.soilNutrientLevels[2].targetMax}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-0">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="p-2 text-[10px] font-semibold text-gray-600">Nutrient</th>
-                          {/* අලුතින් එකතු කල තීරුව */}
-                          <th className="p-2 text-[10px] font-semibold text-blue-600 text-center">Target Crop Needs</th>
-                          <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Current Level</th>
-                          <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Difference</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {evaluation.soilNutrientLevels.map((item, idx) => (
-                          <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                            <td className="p-2 text-xs text-gray-800 font-medium">{item.nutrient}</td>
-                            <td className="p-2 text-[11px] font-bold text-blue-700 text-center bg-blue-50/30">
-                                {item.targetMin} - {item.targetMax === 999999 ? 'No Limit' : item.targetMax} ppm
-                            </td>
-                            <td className="p-2 text-xs text-gray-600 text-center">{item.level}</td>
-                            <td className={`p-2 text-xs font-bold text-center ${item.difference >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                              {item.difference > 0 ? '+' : ''}{item.difference.toFixed(4)} ppm
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+
+                  <div className="bg-amber-50 rounded-lg border border-amber-200 p-4 flex flex-col items-center justify-center relative overflow-hidden flex-1">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
+                    <span className="text-4xl mb-2 drop-shadow-sm">🟤</span>
+                    <h3 className="text-xs font-bold text-amber-900 mb-3 text-center uppercase tracking-wider">Current Soil Level (ppm)</h3>
+                    <div className="flex items-center justify-center gap-2 sm:gap-4 w-full">
+                      {evaluation.soilNutrientLevels.map((item, idx) => (
+                        <div key={idx} className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-amber-100 text-center flex-1">
+                          <span className="block text-[10px] text-gray-500 font-semibold mb-1">{item.nutrient.split(' ')[0]}</span>
+                          <span className="block text-[11px] font-bold text-amber-800 mb-2">{item.level}</span>
+                          <div className={`text-[9px] font-bold px-1 py-1 rounded inline-block w-full ${item.difference >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            <span className="block text-[8px] uppercase mb-0.5 opacity-70">Difference</span>
+                            {item.difference > 0 ? '↑ +' : item.difference < 0 ? '↓ ' : ''}{item.difference.toFixed(4)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                   <h3 className="text-xs font-medium text-gray-700 mb-3">Current vs Required Nutrients</h3>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ fontSize: '10px', borderRadius: '4px' }} />
-                        <Legend wrapperStyle={{ fontSize: '10px' }} />
-                        <Bar dataKey="Required" fill="#9CA3AF" radius={[2, 2, 0, 0]} barSize={20} />
-                        <Bar dataKey="Current" fill="#10B981" radius={[2, 2, 0, 0]} barSize={20} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="flex flex-col gap-3">
+                    {chartData.map((item, idx) => {
+                      const maxVal = Math.max(item.Current, item.Required, 0.01);
+                      const currentPct = (item.Current / maxVal) * 100;
+                      const reqPct = (item.Required / maxVal) * 100;
+                      const isDeficient = item.Current < item.Required;
+                      
+
+                      return (
+                        <div key={idx} className="bg-gray-50 border border-gray-100 p-3 rounded-lg flex flex-col gap-2">
+                          <div className="flex justify-between items-center mb-1">
+                            <h4 className="text-[11px] font-bold text-gray-800 uppercase flex items-center gap-1.5">
+                              <span className="text-sm"></span> {item.name}
+                            </h4>
+                            {isDeficient ? (
+                              <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">
+                                Needs {Number((item.Required - item.Current).toFixed(2))} ppm
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-bold">
+                                Sufficient
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] w-14 text-gray-500 font-bold uppercase tracking-wider">Current</span>
+                              <div className="flex-1 bg-white border border-gray-200 rounded-full h-2.5 overflow-hidden">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${isDeficient ? 'bg-amber-400' : 'bg-green-500'}`} style={{ width: `${currentPct}%` }}></div>
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-700 w-10 text-right">{item.Current.toFixed(1)}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] w-14 text-gray-500 font-bold uppercase tracking-wider">Required</span>
+                              <div className="flex-1 bg-white border border-gray-200 rounded-full h-2.5 overflow-hidden">
+                                <div className="h-full rounded-full bg-blue-500 transition-all duration-1000" style={{ width: `${reqPct}%` }}></div>
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-700 w-10 text-right">{item.Required.toFixed(1)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                
                 
                 {evaluation.chemicalBreakdown && evaluation.chemicalBreakdown.length > 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-green-50 border-b border-green-100 flex justify-between items-center">
                       <div>
                         <h3 className="text-xs font-medium text-green-800">Agrochemical Distribution Calculation</h3>
-                        <p className="text-[9px] text-green-700 mt-0.5">Formula: (Total Grams * Composition) / Total Sq.Feet</p>
+                        <p className="text-[9px] text-green-700 mt-0.5">Visual representation of nutrients added per Sq.Ft</p>
                       </div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 border-b border-gray-200">
-                            <th className="p-2 text-[10px] font-semibold text-gray-600">Chemical Name</th>
-                            <th className="p-2 text-[10px] font-semibold text-gray-600 text-center">Total Amt</th>
-                            <th className="p-2 text-[10px] font-semibold text-green-600 text-center">Added to Sq.Ft (N-P-K)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {evaluation.chemicalBreakdown.map((chem, idx) => (
-                            <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                              <td className="p-2 text-xs text-gray-800 font-medium">{chem.name}</td>
-                              <td className="p-2 text-xs text-gray-600 text-center bg-gray-50 font-bold">{chem.amount_g}g</td>
-                              <td className="p-2 text-[10px] text-green-700 font-bold text-center bg-green-50/50">
-                                +{chem.added.N.toFixed(4)} / +{chem.added.P.toFixed(4)} / +{chem.added.K.toFixed(4)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50/50">
+                      {evaluation.chemicalBreakdown.map((chem, idx) => (
+                        <div key={idx} className="bg-white border border-green-100 rounded-lg p-3 shadow-sm flex items-center gap-3">
+                          <div className="bg-green-100 text-xl h-10 w-10 flex items-center justify-center rounded-full shrink-0">
+                            🧪
+                          </div>
+                          <div className="flex-1 w-full">
+                            <div className="flex justify-between items-start mb-1.5">
+                              <h4 className="text-[11px] font-bold text-gray-800">{chem.name}</h4>
+                              <span className="bg-gray-100 text-gray-600 text-[9px] px-1.5 py-0.5 rounded font-bold border border-gray-200">{chem.amount_g}g</span>
+                            </div>
+                            <div className="flex gap-1.5 w-full">
+                              <div className="bg-blue-50 border border-blue-100 rounded px-1 flex-1 text-center py-1">
+                                <span className="block text-[8px] text-blue-500 font-semibold mb-0.5">N Added</span>
+                                <span className="text-[9px] font-bold text-blue-700">+{chem.added.N.toFixed(4)}</span>
+                              </div>
+                              <div className="bg-purple-50 border border-purple-100 rounded px-1 flex-1 text-center py-1">
+                                <span className="block text-[8px] text-purple-500 font-semibold mb-0.5">P Added</span>
+                                <span className="text-[9px] font-bold text-purple-700">+{chem.added.P.toFixed(4)}</span>
+                              </div>
+                              <div className="bg-orange-50 border border-orange-100 rounded px-1 flex-1 text-center py-1">
+                                <span className="block text-[8px] text-orange-500 font-semibold mb-0.5">K Added</span>
+                                <span className="text-[9px] font-bold text-orange-700">+{chem.added.K.toFixed(4)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                
                 {evaluation.calculatorDetails && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-blue-50 border-b border-blue-100">
