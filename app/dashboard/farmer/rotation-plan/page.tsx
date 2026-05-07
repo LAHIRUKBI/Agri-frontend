@@ -38,6 +38,7 @@ interface PastCropDetails {
 }
 
 interface EvaluationResult {
+  planId?: string;
   targetEvaluation: {
     isSuitable: boolean;
     isFertile: boolean;
@@ -119,6 +120,7 @@ export default function RotationPlanPage() {
   const [initialSoilData, setInitialSoilData] = useState<any>(null);
   
   const [showAIAssistance, setShowAIAssistance] = useState(false);
+  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
@@ -204,15 +206,47 @@ export default function RotationPlanPage() {
     }
   };
 
-  const chartData = evaluation?.soilNutrientLevels.map(item => {
-    const currentVal = parseFloat(item.level);
-    const requiredVal = Number((currentVal - item.difference).toFixed(2));
-    return {
-      name: item.nutrient.split(' ')[0],
-      Current: currentVal,
-      Required: requiredVal > 0 ? requiredVal : 0
-    };
-  }) || [];
+
+  const handleGetAlternatives = async () => {
+    if (!evaluation) return;
+    
+    if (evaluation.alternativeSuggestions && evaluation.alternativeSuggestions.length > 0) {
+      setShowAIAssistance(true);
+      return;
+    }
+
+    setLoadingAlternatives(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/rotation/alternatives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ 
+          planId: evaluation.planId,
+          targetCrop,
+          language,
+          currentN: evaluation.soilNutrientLevels[0].level.split(' ')[0],
+          currentP: evaluation.soilNutrientLevels[1].level.split(' ')[0],
+          currentK: evaluation.soilNutrientLevels[2].level.split(' ')[0]
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setEvaluation({
+        ...evaluation,
+        alternativeSuggestions: data.alternativeSuggestions
+      });
+      
+      setShowAIAssistance(true); 
+
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch AI alternatives.");
+    } finally {
+      setLoadingAlternatives(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -492,10 +526,18 @@ export default function RotationPlanPage() {
                 {!showAIAssistance ? (
                   <div className="mt-4 pt-3 border-t border-gray-200/60 flex justify-center">
                     <button
-                      onClick={() => setShowAIAssistance(true)}
-                      className="text-xs font-medium px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded shadow-sm hover:bg-blue-100 flex items-center gap-2"
+                      type="button"
+                      onClick={handleGetAlternatives}
+                      disabled={loadingAlternatives}
+                      className="text-xs font-medium px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded shadow-sm hover:bg-blue-100 flex items-center gap-2 disabled:opacity-50"
                     >
-                      Ask AI for Remedies & Alternatives
+                      {loadingAlternatives ? (
+                        <>
+                          <span className="animate-spin text-lg">⏳</span> Getting Suitable Crops...
+                        </>
+                      ) : (
+                        "Ask AI for Suitable Alternative Crops"
+                      )}
                     </button>
                   </div>
                 ) : (
@@ -546,102 +588,122 @@ export default function RotationPlanPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
+              {/* Main Visual Indicator: Current Soil vs Target Requirements */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 className="text-xs font-bold text-gray-800 mb-3 uppercase tracking-wide">Current Soil Level vs Target Requirements</h3>
                 <div className="flex flex-col gap-3">
-                  <div className="bg-green-50 rounded-lg border border-green-200 p-4 flex flex-col items-center justify-center relative overflow-hidden flex-1">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-green-400"></div>
-                    <span className="text-4xl mb-2 drop-shadow-sm">🌱</span>
-                    <h3 className="text-xs font-bold text-green-900 mb-3 text-center uppercase tracking-wider">{targetCrop} (ppm)</h3>
-                    <div className="flex items-center justify-center gap-2 sm:gap-4 w-full">
-                      <div className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-green-100 text-center flex-1">
-                        <span className="block text-[10px] text-gray-500 font-semibold mb-1">Nitrogen (N)</span>
-                        <span className="text-[11px] font-bold text-blue-700">
-                          {evaluation.soilNutrientLevels[0].targetMin} - {evaluation.soilNutrientLevels[0].targetMax === 999999 ? 'No Limit' : evaluation.soilNutrientLevels[0].targetMax}
-                        </span>
-                      </div>
-                      <div className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-green-100 text-center flex-1">
-                        <span className="block text-[10px] text-gray-500 font-semibold mb-1">Phosphorus (P)</span>
-                        <span className="text-[11px] font-bold text-blue-700">
-                          {evaluation.soilNutrientLevels[1].targetMin} - {evaluation.soilNutrientLevels[1].targetMax === 999999 ? 'No Limit' : evaluation.soilNutrientLevels[1].targetMax}
-                        </span>
-                      </div>
-                      <div className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-green-100 text-center flex-1">
-                        <span className="block text-[10px] text-gray-500 font-semibold mb-1">Potassium (K)</span>
-                        <span className="text-[11px] font-bold text-blue-700">
-                          {evaluation.soilNutrientLevels[2].targetMin} - {evaluation.soilNutrientLevels[2].targetMax === 999999 ? 'No Limit' : evaluation.soilNutrientLevels[2].targetMax}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  {evaluation.soilNutrientLevels.map((item, idx) => {
+                    const currentVal = parseFloat(item.level);
+                    const minVal = item.targetMin || 0;
+                    const maxVal = item.targetMax === 999999 ? minVal * 1.5 : (item.targetMax || minVal * 1.5);
+                    const displayMax = item.targetMax === 999999 ? 'No Limit' : item.targetMax;
+                    
+                    const status = item.depletionPrediction; 
+                    const isDeficit = status === 'Deficit';
+                    const isOptimal = status === 'Optimal';
+                    
+                    const icon = item.nutrient.includes('Nitrogen') ? '☁️' : item.nutrient.includes('Phosphorus') ? '🪨' : '🍌';
 
-                  <div className="bg-amber-50 rounded-lg border border-amber-200 p-4 flex flex-col items-center justify-center relative overflow-hidden flex-1">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
-                    <span className="text-4xl mb-2 drop-shadow-sm">🟤</span>
-                    <h3 className="text-xs font-bold text-amber-900 mb-3 text-center uppercase tracking-wider">Current Soil Level (ppm)</h3>
-                    <div className="flex items-center justify-center gap-2 sm:gap-4 w-full">
-                      {evaluation.soilNutrientLevels.map((item, idx) => (
-                        <div key={idx} className="bg-white px-2 sm:px-3 py-2 rounded shadow-sm border border-amber-100 text-center flex-1">
-                          <span className="block text-[10px] text-gray-500 font-semibold mb-1">{item.nutrient.split(' ')[0]}</span>
-                          <span className="block text-[11px] font-bold text-amber-800 mb-2">{item.level}</span>
-                          <div className={`text-[9px] font-bold px-1 py-1 rounded inline-block w-full ${item.difference >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            <span className="block text-[8px] uppercase mb-0.5 opacity-70">Difference</span>
-                            {item.difference > 0 ? '↑ +' : item.difference < 0 ? '↓ ' : ''}{item.difference.toFixed(4)}
-                          </div>
+                    // Good Soil Limits Fetching
+                    const symbol = item.nutrient.includes('Nitrogen') ? 'N' : item.nutrient.includes('Phosphorus') ? 'P' : 'K';
+                    const goodSoilNutrient = initialSoilData?.nutrients?.find((n: any) => n.symbol === symbol);
+                    const goodMin = goodSoilNutrient?.min || 0;
+                    const goodMax = goodSoilNutrient?.max || 100;
+
+                    // Progress bar එකේ පළල සැකසීමට උපරිම අගය ගණනය කිරීම (Good Soil Max එකත් ඇතුළත් කර)
+                    const maxGraph = Math.max(currentVal, maxVal, goodMax) * 1.1; 
+                    const currentPct = (currentVal / maxGraph) * 100;
+                    const minPct = (minVal / maxGraph) * 100;
+                    const maxPct = (maxVal / maxGraph) * 100;
+                    
+                    const isGoodSoil = currentVal >= goodMin && currentVal <= goodMax;
+
+                    return (
+                      <div key={idx} className={`border p-3 rounded-lg flex flex-col gap-2 shadow-sm ${
+                        isOptimal ? 'bg-green-50 border-green-200' : 
+                        isDeficit ? 'bg-red-50 border-red-200' : 
+                        'bg-yellow-50 border-yellow-200'
+                      }`}>
+                        
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="text-[11px] font-bold text-gray-800 uppercase flex items-center gap-1.5">
+                            <span className="text-sm">{icon}</span> {item.nutrient}
+                          </h4>
+                          <span className={`text-[9px] px-2 py-0.5 rounded font-bold border ${
+                            isOptimal ? 'bg-green-200 text-green-800 border-green-300' :
+                            isDeficit ? 'bg-red-200 text-red-800 border-red-300' :
+                            'bg-yellow-200 text-yellow-800 border-yellow-300'
+                          }`}>
+                            {isOptimal 
+                              ? '✅ Within Target Range' 
+                              : isDeficit 
+                                ? `⚠️ Deficit (Short by ${Math.abs(item.difference).toFixed(2)} ppm)` 
+                                : `⚠️ Surplus (Excess by ${Math.abs(item.difference).toFixed(2)} ppm)`
+                            }
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                        
+                        <div className="flex flex-col gap-1.5 mt-2">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[9px] w-24 text-gray-700 font-bold uppercase tracking-wider">Current</span>
+                            <div className="flex-1 bg-white border border-gray-300 rounded-full h-2.5 overflow-hidden shadow-inner">
+                              <div className={`h-full rounded-full transition-all duration-1000 ${
+                                isOptimal ? 'bg-green-500' : isDeficit ? 'bg-red-500' : 'bg-yellow-500'
+                              }`} style={{ width: `${currentPct}%` }}></div>
+                            </div>
+                            <span className="text-[10px] font-extrabold text-gray-900 w-12 text-right">{currentVal.toFixed(1)}</span>
+                          </div>
 
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <h3 className="text-xs font-medium text-gray-700 mb-3">Current vs Required Nutrients</h3>
-                  <div className="flex flex-col gap-3">
-                    {chartData.map((item, idx) => {
-                      const maxVal = Math.max(item.Current, item.Required, 0.01);
-                      const currentPct = (item.Current / maxVal) * 100;
-                      const reqPct = (item.Required / maxVal) * 100;
-                      const isDeficient = item.Current < item.Required;
-                      
-
-                      return (
-                        <div key={idx} className="bg-gray-50 border border-gray-100 p-3 rounded-lg flex flex-col gap-2">
-                          <div className="flex justify-between items-center mb-1">
-                            <h4 className="text-[11px] font-bold text-gray-800 uppercase flex items-center gap-1.5">
-                              <span className="text-sm"></span> {item.name}
-                            </h4>
-                            {isDeficient ? (
-                              <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">
-                                Needs {Number((item.Required - item.Current).toFixed(2))} ppm
-                              </span>
-                            ) : (
-                              <span className="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-bold">
-                                Sufficient
-                              </span>
-                            )}
+                          <div className="flex items-center gap-3">
+                            <span className="text-[9px] w-24 text-gray-500 font-bold uppercase tracking-wider">{targetCrop} Target Min</span>
+                            <div className="flex-1 bg-white border border-gray-200 rounded-full h-1.5 overflow-hidden opacity-70">
+                              <div className="h-full rounded-full bg-blue-400 transition-all duration-1000" style={{ width: `${minPct}%` }}></div>
+                            </div>
+                            <span className="text-[9px] font-bold text-gray-600 w-12 text-right">{minVal.toFixed(1)}</span>
                           </div>
                           
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] w-14 text-gray-500 font-bold uppercase tracking-wider">Current</span>
-                              <div className="flex-1 bg-white border border-gray-200 rounded-full h-2.5 overflow-hidden">
-                                <div className={`h-full rounded-full transition-all duration-1000 ${isDeficient ? 'bg-amber-400' : 'bg-green-500'}`} style={{ width: `${currentPct}%` }}></div>
-                              </div>
-                              <span className="text-[10px] font-bold text-gray-700 w-10 text-right">{item.Current.toFixed(1)}</span>
+                          {item.targetMax !== 999999 && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-[9px] w-24 text-gray-500 font-bold uppercase tracking-wider">{targetCrop} Target Max</span>
+                            <div className="flex-1 bg-white border border-gray-200 rounded-full h-1.5 overflow-hidden opacity-70">
+                              <div className="h-full rounded-full bg-blue-600 transition-all duration-1000" style={{ width: `${maxPct}%` }}></div>
                             </div>
-
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] w-14 text-gray-500 font-bold uppercase tracking-wider">Required</span>
-                              <div className="flex-1 bg-white border border-gray-200 rounded-full h-2.5 overflow-hidden">
-                                <div className="h-full rounded-full bg-blue-500 transition-all duration-1000" style={{ width: `${reqPct}%` }}></div>
-                              </div>
-                              <span className="text-[10px] font-bold text-gray-700 w-10 text-right">{item.Required.toFixed(1)}</span>
-                            </div>
+                            <span className="text-[9px] font-bold text-gray-600 w-12 text-right">{displayMax}</span>
                           </div>
+                          )}
+
+                          {/* Good Soil (Fertile) Indicator */}
+                          {goodSoilNutrient && (
+                            <div className="flex items-center gap-3 mt-2 pt-2 border-t border-dashed border-gray-200">
+                              <span className="text-[9px] w-24 text-teal-600 font-bold uppercase tracking-wider leading-tight">Good Soil (Fertile)</span>
+                              <div className="flex-1 relative h-3 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center">
+                                {/* The fertile range background */}
+                                <div 
+                                  className="absolute h-full bg-teal-200 border-x border-teal-400" 
+                                  style={{ 
+                                    left: `${(goodMin / maxGraph) * 100}%`, 
+                                    width: `${((goodMax - goodMin) / maxGraph) * 100}%` 
+                                  }}
+                                ></div>
+                                {/* The Current level pointer */}
+                                <div 
+                                  className="absolute h-full w-1.5 bg-gray-800 rounded shadow-md z-10" 
+                                  style={{ left: `calc(${(currentVal / maxGraph) * 100}% - 3px)` }}
+                                ></div>
+                              </div>
+                              <div className="w-16 text-right flex flex-col justify-center">
+                                <span className="text-[9px] font-bold text-teal-700">{goodMin}-{goodMax}</span>
+                                <span className={`text-[8px] font-bold ${isGoodSoil ? 'text-teal-600' : 'text-orange-500'}`}>
+                                  {isGoodSoil ? 'IN RANGE' : 'OUT OF RANGE'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -687,56 +749,20 @@ export default function RotationPlanPage() {
                   </div>
                 )}
 
-                {evaluation.calculatorDetails && (
+                {evaluation.calculatorDetails && evaluation.calculatorDetails.landCalculations && evaluation.calculatorDetails.landCalculations.length > 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-blue-50 border-b border-blue-100">
-                      <h3 className="text-xs font-medium text-blue-800">Calculation Logic Viewer</h3>
+                      <h3 className="text-xs font-medium text-blue-800">Land Area Conversion Viewer</h3>
                     </div>
                     <div className="p-3 space-y-3">
                       <div>
-                        <h4 className="text-[10px] font-bold text-gray-700 mb-1">Land Area Conversion (1 Acre = 43,560 Sq.Ft)</h4>
-                        {evaluation.calculatorDetails.landCalculations?.map((lc, idx) => (
-                          <div key={idx} className="text-[11px] text-gray-600 flex justify-between border-b border-dashed border-gray-200 pb-1 mb-1">
+                        <h4 className="text-[10px] font-bold text-gray-700 mb-2">Acre to Square Feet (1 Acre = 43,560 Sq.Ft)</h4>
+                        {evaluation.calculatorDetails.landCalculations.map((lc, idx) => (
+                          <div key={idx} className="text-[11px] text-gray-600 flex justify-between border-b border-dashed border-gray-200 pb-1 mb-1 last:border-0">
                             <span>{lc.cropName} Field Area:</span>
                             <span className="font-bold text-gray-800">{lc.acres} Acres = {lc.sqFt.toLocaleString()} Sq.Ft</span>
                           </div>
                         ))}
-                      </div>
-
-                      <div>
-                         <h4 className="text-[10px] font-bold text-gray-700 mb-1">Crop Specific Nutrient Gap</h4>
-                         <table className="w-full text-left border-collapse mt-1">
-                          <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200">
-                              <th className="p-1 text-[9px] font-semibold text-gray-600">Nutrient</th>
-                              <th className="p-1 text-[9px] font-semibold text-gray-600 text-center">Req (Min-Max)</th>
-                              <th className="p-1 text-[9px] font-semibold text-gray-600 text-center">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {['N', 'P', 'K'].map((nut, idx) => {
-                              const req = evaluation.calculatorDetails!.requirements[nut as 'N'|'P'|'K'];
-                              const status = evaluation.calculatorDetails!.statuses[nut as 'N'|'P'|'K'];
-                              return (
-                                <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                                  <td className="p-1 text-[11px] text-gray-800 font-bold">{nut}</td>
-                                  <td className="p-1 text-[11px] text-gray-600 text-center">
-                                    {req.min.toFixed(1)} - {req.max === 999999 ? 'No Limit' : req.max.toFixed(1)}
-                                  </td>
-                                  <td className="p-1 text-[11px] text-center">
-                                    <span className={`px-1.5 py-0.5 rounded font-bold ${
-                                      status === 'Deficit' ? 'bg-red-100 text-red-700' : 
-                                      status === 'Surplus' ? 'bg-yellow-100 text-yellow-700' : 
-                                      'bg-green-100 text-green-700'
-                                    }`}>
-                                      {status}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
                       </div>
                     </div>
                   </div>
