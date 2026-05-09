@@ -15,6 +15,10 @@ interface ChemicalBreakdown {
   added: { N: number; P: number; K: number };
 }
 
+interface MathBreakdown {
+  base: number; ml: number; loss: number;
+}
+
 interface CalculatorDetails {
   requirements: {
     N: { min: number; max: number; mid: number };
@@ -34,7 +38,6 @@ interface PastCropDetails {
   endMonth: string;
   endYear: string;
   fertilizers: ChemicalItem[];
-  pesticides: ChemicalItem[];
 }
 
 interface EvaluationResult {
@@ -52,6 +55,7 @@ interface EvaluationResult {
     difference: number;
     targetMin?: number; 
     targetMax?: number; 
+    breakdown: MathBreakdown;
   }[];
   alternativeSuggestions?: {
     cropName: string;
@@ -72,18 +76,18 @@ const LAND_SIZES = [
   { label: '50 Acres', value: 50 }, { label: '100 Acres', value: 100 }
 ];
 
+// සැබෑ ලෝකයේ පොහොර යොදන ප්‍රමාණයන්
 const AMOUNTS = [
-  { label: '100g', value: 100 }, { label: '200g', value: 200 },
-  { label: '500g', value: 500 }, { label: '1kg', value: 1000 },
-  { label: '2kg', value: 2000 }, { label: '5kg', value: 5000 },
-  { label: '10kg', value: 10000 }
+  { label: '5kg', value: 5000 }, 
+  { label: '10kg', value: 10000 },
+  { label: '25kg', value: 25000 }, 
+  { label: '50kg', value: 50000 },
+  { label: '100kg', value: 100000 }, 
+  { label: '150kg', value: 150000 }
 ];
 
 const FERTILIZER_OPTIONS = [
-  'Urea', 'TSP (Triple Super Phosphate)', 'MOP (Muriate of Potash)', 'NPK 15-15-15', 'Dolomite', 'Compost / Organic'
-];
-const PESTICIDE_OPTIONS = [
-  'Glyphosate 41% SL', 'Mancozeb 80% WP', 'Chlorpyrifos 50% EC', 'Imidacloprid 70% WG', 'Captan 50% WP'
+  'Urea', 'TSP (Triple Super Phosphate)', 'MOP (Muriate of Potash)', 'NPK 15-15-15', 'Dolomite', 'Compost / Organic', 'Ammonium Sulfate (SOA)', 'Eppawala Rock Phosphate (ERP)', 'NPK 12-12-17'
 ];
 
 const SOIL_TYPES = ['Sandy', 'Loam', 'Clay'];
@@ -110,7 +114,7 @@ export default function RotationPlanPage() {
 
   const [language, setLanguage] = useState('English');
   const [pastCrops, setPastCrops] = useState<PastCropDetails[]>([
-    { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [], pesticides: [] }
+    { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [] }
   ]);
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -146,26 +150,25 @@ export default function RotationPlanPage() {
     setPastCrops(updatedCrops);
   };
 
-  const handleAddChemical = (cropIndex: number, type: 'fertilizers' | 'pesticides') => {
+  const handleAddFertilizer = (cropIndex: number) => {
     const updatedCrops = [...pastCrops];
-    const defaultName = type === 'fertilizers' ? FERTILIZER_OPTIONS[0] : PESTICIDE_OPTIONS[0];
-    updatedCrops[cropIndex][type].push({ name: defaultName, amount_g: 100 });
+    updatedCrops[cropIndex].fertilizers.push({ name: FERTILIZER_OPTIONS[0], amount_g: 5000 }); // Default 5kg
     setPastCrops(updatedCrops);
   };
 
-  const handleRemoveChemical = (cropIndex: number, type: 'fertilizers' | 'pesticides', chemIndex: number) => {
+  const handleRemoveFertilizer = (cropIndex: number, chemIndex: number) => {
     const updatedCrops = [...pastCrops];
-    updatedCrops[cropIndex][type] = updatedCrops[cropIndex][type].filter((_, i) => i !== chemIndex);
+    updatedCrops[cropIndex].fertilizers = updatedCrops[cropIndex].fertilizers.filter((_, i) => i !== chemIndex);
     setPastCrops(updatedCrops);
   };
 
-  const handleChemicalChange = (cropIndex: number, type: 'fertilizers' | 'pesticides', chemIndex: number, field: string, value: any) => {
+  const handleFertilizerChange = (cropIndex: number, chemIndex: number, field: string, value: any) => {
     const updatedCrops = [...pastCrops];
-    updatedCrops[cropIndex][type][chemIndex] = { ...updatedCrops[cropIndex][type][chemIndex], [field]: value };
+    updatedCrops[cropIndex].fertilizers[chemIndex] = { ...updatedCrops[cropIndex].fertilizers[chemIndex], [field]: value };
     setPastCrops(updatedCrops);
   };
 
-  const addCropField = () => setPastCrops([...pastCrops, { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [], pesticides: [] }]);
+  const addCropField = () => setPastCrops([...pastCrops, { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [] }]);
   const removeCropField = (index: number) => setPastCrops(pastCrops.filter((_, i) => i !== index));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -360,7 +363,7 @@ export default function RotationPlanPage() {
                     />
                   </div>
                 </div>
-                <p className="text-[9px] text-gray-500 mt-2">*These factors help the Machine Learning model accurately calculate nutrient leaching and retention.</p>
+                <p className="text-[9px] text-gray-500 mt-2">*These factors help the calculation of nutrient leaching and retention.</p>
               </div>
             </div>
 
@@ -425,48 +428,25 @@ export default function RotationPlanPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-3 mt-3">
-                      <div>
-                        <label className="block text-[10px] font-medium text-black mb-2">Fertilizers Applied (Total Amount)</label>
-                        {crop.fertilizers.map((fert, fIdx) => (
-                          <div key={fIdx} className="flex items-center gap-2 mb-2">
-                            <select
-                              className="text-black text-xs px-2 py-1 border rounded w-1/2"
-                              value={fert.name}
-                              onChange={(e) => handleChemicalChange(index, 'fertilizers', fIdx, 'name', e.target.value)}
-                            >
-                              {FERTILIZER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                            <select className="text-black text-xs px-2 py-1 border rounded w-1/3"
-                              value={fert.amount_g} onChange={(e) => handleChemicalChange(index, 'fertilizers', fIdx, 'amount_g', Number(e.target.value))}>
-                              {AMOUNTS.map(amt => <option key={amt.value} value={amt.value}>{amt.label}</option>)}
-                            </select>
-                            <button type="button" onClick={() => handleRemoveChemical(index, 'fertilizers', fIdx)} className="text-red-500 text-xs hover:bg-red-50 p-1 rounded">×</button>
-                          </div>
-                        ))}
-                        <button type="button" onClick={() => handleAddChemical(index, 'fertilizers')} className="text-[10px] text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">+ Add Fertilizer</button>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-[10px] font-medium text-black mb-2">Pesticides Applied (Total Amount)</label>
-                        {crop.pesticides.map((pest, pIdx) => (
-                          <div key={pIdx} className="flex items-center gap-2 mb-2">
-                            <select
-                              className="text-black text-xs px-2 py-1 border rounded w-1/2"
-                              value={pest.name}
-                              onChange={(e) => handleChemicalChange(index, 'pesticides', pIdx, 'name', e.target.value)}
-                            >
-                              {PESTICIDE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                            <select className="text-black text-xs px-2 py-1 border rounded w-1/3"
-                              value={pest.amount_g} onChange={(e) => handleChemicalChange(index, 'pesticides', pIdx, 'amount_g', Number(e.target.value))}>
-                              {AMOUNTS.map(amt => <option key={amt.value} value={amt.value}>{amt.label}</option>)}
-                            </select>
-                            <button type="button" onClick={() => handleRemoveChemical(index, 'pesticides', pIdx)} className="text-red-500 text-xs hover:bg-red-50 p-1 rounded">×</button>
-                          </div>
-                        ))}
-                        <button type="button" onClick={() => handleAddChemical(index, 'pesticides')} className="text-[10px] text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">+ Add Pesticide</button>
-                      </div>
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <label className="block text-[10px] font-medium text-black mb-2">Fertilizers Applied (Total Amount)</label>
+                      {crop.fertilizers.map((fert, fIdx) => (
+                        <div key={fIdx} className="flex items-center gap-2 mb-2 md:w-1/2">
+                          <select
+                            className="text-black text-xs px-2 py-1 border rounded w-1/2"
+                            value={fert.name}
+                            onChange={(e) => handleFertilizerChange(index, fIdx, 'name', e.target.value)}
+                          >
+                            {FERTILIZER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                          <select className="text-black text-xs px-2 py-1 border rounded w-1/3"
+                            value={fert.amount_g} onChange={(e) => handleFertilizerChange(index, fIdx, 'amount_g', Number(e.target.value))}>
+                            {AMOUNTS.map(amt => <option key={amt.value} value={amt.value}>{amt.label}</option>)}
+                          </select>
+                          <button type="button" onClick={() => handleRemoveFertilizer(index, fIdx)} className="text-red-500 text-xs hover:bg-red-50 p-1 rounded">×</button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => handleAddFertilizer(index)} className="text-[10px] text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">+ Add Fertilizer</button>
                     </div>
                   </div>
                 ))}
@@ -590,10 +570,16 @@ export default function RotationPlanPage() {
 
               {/* Main Visual Indicator: Current Soil vs Target Requirements */}
               <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <h3 className="text-xs font-bold text-gray-800 mb-3 uppercase tracking-wide">Current Soil Level vs Target Requirements</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
+                   <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Current Soil Level vs Target Requirements</h3>
+                   <span className="text-[9px] text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200 font-medium">
+                     💡 <span className="font-bold">Current</span> = Baseline + ML Predict - Env Loss
+                   </span>
+                </div>
+                
                 <div className="flex flex-col gap-3">
                   {evaluation.soilNutrientLevels.map((item, idx) => {
-                    const currentVal = parseFloat(item.level);
+                    const currentVal = parseFloat(item.level) || 0;
                     const minVal = item.targetMin || 0;
                     const maxVal = item.targetMax === 999999 ? minVal * 1.5 : (item.targetMax || minVal * 1.5);
                     const displayMax = item.targetMax === 999999 ? 'No Limit' : item.targetMax;
@@ -616,7 +602,9 @@ export default function RotationPlanPage() {
                     const minPct = (minVal / maxGraph) * 100;
                     const maxPct = (maxVal / maxGraph) * 100;
                     
-                    const isGoodSoil = currentVal >= goodMin && currentVal <= goodMax;
+                    const isBelowGood = currentVal < goodMin;
+                    const isAboveGood = currentVal > goodMax;
+                    const isWithinGood = currentVal >= goodMin && currentVal <= goodMax;
 
                     return (
                       <div key={idx} className={`border p-3 rounded-lg flex flex-col gap-2 shadow-sm ${
@@ -634,12 +622,7 @@ export default function RotationPlanPage() {
                             isDeficit ? 'bg-red-200 text-red-800 border-red-300' :
                             'bg-yellow-200 text-yellow-800 border-yellow-300'
                           }`}>
-                            {isOptimal 
-                              ? '✅ Within Target Range' 
-                              : isDeficit 
-                                ? `⚠️ Deficit (Short by ${Math.abs(item.difference).toFixed(2)} ppm)` 
-                                : `⚠️ Surplus (Excess by ${Math.abs(item.difference).toFixed(2)} ppm)`
-                            }
+                            {isOptimal ? '✅ TARGET OPTIMAL' : isDeficit ? `⚠️ TARGET DEFICIT` : `⚠️ TARGET SURPLUS`}
                           </span>
                         </div>
                         
@@ -672,31 +655,79 @@ export default function RotationPlanPage() {
                           </div>
                           )}
 
-                          {/* Good Soil (Fertile) Indicator */}
+                          {/* Soil Calculation Breakdown */}
+                          <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+                             <h5 className="text-[10px] font-bold text-gray-700 mb-1.5 uppercase flex justify-between">
+                               Soil Calculation Breakdown:
+                               <span className="text-[9px] font-normal text-gray-500 bg-gray-100 px-1.5 rounded lowercase">baseline + ml predict - env loss = current</span>
+                             </h5>
+                             <div className="flex items-center gap-2 text-[10px] font-medium text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
+                                <div className="text-center flex-1">
+                                  <span className="block text-[8px] text-gray-400">Baseline</span>
+                                  <span className="font-bold text-blue-700">{item.breakdown?.base !== undefined ? item.breakdown.base.toFixed(2) : '0.00'}</span>
+                                </div>
+                                <span className="text-gray-400">+</span>
+                                <div className="text-center flex-1">
+                                  <span className="block text-[8px] text-gray-400">ML Predict</span>
+                                  <span className={`font-bold ${item.breakdown?.ml >= 0 ? 'text-green-600' : 'text-orange-500'}`}>
+                                    {item.breakdown?.ml > 0 ? '+' : ''}
+                                    {item.breakdown?.ml !== undefined ? item.breakdown.ml.toFixed(2) : '0.00'}
+                                  </span>
+                                </div>
+                                <span className="text-gray-400">-</span>
+                                <div className="text-center flex-1">
+                                  <span className="block text-[8px] text-gray-400">Env Loss</span>
+                                  <span className="font-bold text-red-500">{item.breakdown?.loss !== undefined ? item.breakdown.loss.toFixed(2) : '0.00'}</span>
+                                </div>
+                                <span className="text-gray-400">=</span>
+                                <div className="text-center flex-1 bg-white border border-gray-200 py-0.5 rounded shadow-sm">
+                                  <span className="block text-[8px] text-gray-400">Current</span>
+                                  <span className="font-bold text-gray-900">{currentVal.toFixed(2)}</span>
+                                </div>
+                             </div>
+                          </div>
+
+                          {/* Good Soil (Fertile) Indicator & Detailed Status Box */}
                           {goodSoilNutrient && (
-                            <div className="flex items-center gap-3 mt-2 pt-2 border-t border-dashed border-gray-200">
-                              <span className="text-[9px] w-24 text-teal-600 font-bold uppercase tracking-wider leading-tight">Good Soil (Fertile)</span>
-                              <div className="flex-1 relative h-3 bg-gray-100 rounded border border-gray-200 overflow-hidden flex items-center">
-                                {/* The fertile range background */}
-                                <div 
-                                  className="absolute h-full bg-teal-200 border-x border-teal-400" 
-                                  style={{ 
-                                    left: `${(goodMin / maxGraph) * 100}%`, 
-                                    width: `${((goodMax - goodMin) / maxGraph) * 100}%` 
-                                  }}
-                                ></div>
-                                {/* The Current level pointer */}
-                                <div 
-                                  className="absolute h-full w-1.5 bg-gray-800 rounded shadow-md z-10" 
-                                  style={{ left: `calc(${(currentVal / maxGraph) * 100}% - 3px)` }}
-                                ></div>
+                            <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+                              <h5 className="text-[10px] font-bold text-gray-700 mb-1.5 uppercase">Good Soil (Fertile) Analysis:</h5>
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 relative h-4 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center">
+                                  {/* The fertile range background */}
+                                  <div 
+                                    className="absolute h-full bg-teal-200 border-x border-teal-500 opacity-60" 
+                                    style={{ 
+                                      left: `${(goodMin / maxGraph) * 100}%`, 
+                                      width: `${((goodMax - goodMin) / maxGraph) * 100}%` 
+                                    }}
+                                  ></div>
+                                  {/* The Current level pointer */}
+                                  <div 
+                                    className="absolute h-full w-2 bg-gray-800 rounded shadow-md z-10" 
+                                    style={{ left: `calc(${(currentVal / maxGraph) * 100}% - 4px)` }}
+                                  ></div>
+                                </div>
+                                <div className="w-16 text-right">
+                                  <span className="text-[10px] font-bold text-teal-800">{goodMin}-{goodMax}</span>
+                                </div>
                               </div>
-                              <div className="w-16 text-right flex flex-col justify-center">
-                                <span className="text-[9px] font-bold text-teal-700">{goodMin}-{goodMax}</span>
-                                <span className={`text-[8px] font-bold ${isGoodSoil ? 'text-teal-600' : 'text-orange-500'}`}>
-                                  {isGoodSoil ? 'IN RANGE' : 'OUT OF RANGE'}
-                                </span>
+                              
+                              <div className="mt-2 space-y-1">
+                                <div className="flex justify-between items-center bg-white p-1.5 rounded border border-gray-100">
+                                   <span className="text-[10px] text-gray-600 font-medium">Status vs Fertile Limits:</span>
+                                   {isBelowGood && <span className="text-[9px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">BELOW MINIMUM (Short by ${(goodMin - currentVal).toFixed(1)})</span>}
+                                   {isWithinGood && <span className="text-[9px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">WITHIN FERTILE RANGE</span>}
+                                   {isAboveGood && <span className="text-[9px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded">EXCEEDS MAXIMUM (Over by ${(currentVal - goodMax).toFixed(1)})</span>}
+                                </div>
+                                
+                                <div className="flex justify-between items-center bg-white p-1.5 rounded border border-gray-100">
+                                   <span className="text-[10px] text-gray-600 font-medium">Status vs Target Crop ({targetCrop}):</span>
+                                   {isDeficit && <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">CROP DEFICIT (Needs ${(minVal - currentVal).toFixed(1)} more)</span>}
+                                   {isOptimal && <span className="text-[9px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">OPTIMAL FOR CROP</span>}
+                                   {status === 'Surplus' && <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded">CROP SURPLUS (Over by ${(currentVal - maxVal).toFixed(1)})</span>}
+                                </div>
                               </div>
+
                             </div>
                           )}
 
@@ -713,7 +744,7 @@ export default function RotationPlanPage() {
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-green-50 border-b border-green-100 flex justify-between items-center">
                       <div>
-                        <h3 className="text-xs font-medium text-green-800">Agrochemical Distribution Calculation</h3>
+                        <h3 className="text-xs font-medium text-green-800">Fertilizer Distribution Calculation</h3>
                         <p className="text-[9px] text-green-700 mt-0.5">Visual representation of nutrients added per Sq.Ft</p>
                       </div>
                     </div>
