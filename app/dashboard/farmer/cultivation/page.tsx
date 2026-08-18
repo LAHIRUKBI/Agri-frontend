@@ -224,7 +224,6 @@ export default function CultivationPage() {
                 <div key={idx} className="bg-white p-5 rounded-xl border border-green-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full">
                   <div>
                     <h3 className="text-lg font-bold text-green-900">{crop.cropName}</h3>
-                    <p className="text-sm text-gray-600 mt-3 leading-relaxed">{crop.reasoning}</p>
                   </div>
                   <button
                     onClick={() => handleViewSteps(crop)}
