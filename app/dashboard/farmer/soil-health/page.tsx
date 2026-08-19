@@ -5,6 +5,7 @@ import FarmerSidebar from '@/app/navigation/farmer/page';
 
 type Mode = 'quick' | 'request';
 type LanguageOption = 'English' | 'Sinhala';
+type RequestFilter = 'all' | 'pending' | 'completed' | 'rejected';
 
 interface ImageMetrics {
   brightness: number;
@@ -50,9 +51,12 @@ interface SoilRequest {
   _id: string;
   district: string;
   location?: string;
+  visitAddress?: string;
+  addressSource?: 'profile' | 'manual';
   cropType?: string;
   season?: string;
   language?: LanguageOption;
+  landSize?: number;
   preferredDate?: string;
   scheduledDate?: string;
   status: string;
@@ -73,12 +77,29 @@ interface SoilRequest {
   createdAt: string;
 }
 
+interface RequestDraft {
+  district: string;
+  location: string;
+  visitAddress: string;
+  cropType: string;
+  season: string;
+  landSize: string;
+  preferredDate: string;
+  farmerNotes: string;
+}
+
 interface SidebarUser {
   id?: string;
   name: string;
   email?: string;
   phoneNumber?: string;
   photoURL?: string;
+  address?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zipCode?: string;
 }
 
 const DISTRICTS = [
@@ -163,9 +184,21 @@ const seasonLabels: Record<LanguageOption, Record<string, string>> = {
 const initialForm = {
   district: 'Anuradhapura',
   location: '',
+  visitAddress: '',
   cropType: '',
   season: 'Maha',
   language: 'English' as LanguageOption,
+  landSize: '1',
+  preferredDate: '',
+  farmerNotes: ''
+};
+
+const initialRequestDraft: RequestDraft = {
+  district: 'Anuradhapura',
+  location: '',
+  visitAddress: '',
+  cropType: '',
+  season: 'Maha',
   landSize: '1',
   preferredDate: '',
   farmerNotes: ''
@@ -186,6 +219,12 @@ const uiText = {
     language: 'Language',
     fieldLocation: 'Field location',
     fieldLocationPlaceholder: 'Village or field name',
+    visitAddress: 'Visit address',
+    visitAddressPlaceholder: 'House number, road, village, and any landmarks',
+    visitAddressHint: 'If your farmer profile already has an address, we will use it automatically. You can still replace it here for this request.',
+    profileAddressFound: 'Profile address found',
+    profileAddressMissing: 'Profile address missing',
+    addressRequiredForRequest: 'A visit address is required for sensor visit requests.',
     cropType: 'Crop type',
     cropTypePlaceholder: 'Paddy, maize, banana...',
     landSize: 'Land size (acres)',
@@ -216,6 +255,29 @@ const uiText = {
     confidence: 'Confidence',
     recommendations: 'Recommendations',
     mySensorRequests: 'My sensor requests',
+    requestAll: 'All',
+    requestView: 'View',
+    requestEdit: 'Edit',
+    requestSave: 'Save changes',
+    requestCancel: 'Cancel',
+    clearRequests: 'Clear all',
+    clearRequestsConfirm: 'Are you sure you want to clear all sensor requests?',
+    deleteRequest: 'Delete',
+    deleteRequestConfirm: 'Delete this sensor request?',
+    requestDeleted: 'Sensor request deleted.',
+    requestsCleared: 'All sensor requests cleared.',
+    requestUpdated: 'Sensor request updated.',
+    requestDetails: 'Request details',
+    requestSummary: 'Request summary',
+    requestTimeline: 'Request timeline',
+    requestCreated: 'Created',
+    requestUpdatedLabel: 'Last update',
+    requestStatus: 'Status',
+    requestPreviewTitle: 'Sensor request preview',
+    pendingOnlyEdit: 'Only pending requests can be edited.',
+    requestEmptyState: 'Select a request to view the full details.',
+    requestNoteLabel: 'Farmer note',
+    requestEditHint: 'You can edit pending requests before the admin confirms them.',
     noRequests:
       'No sensor requests yet. Submit one when you want a field officer to collect pH and NPK readings.',
     preferredDate: 'Preferred date',
@@ -276,6 +338,12 @@ const uiText = {
     language: 'භාෂාව',
     fieldLocation: 'ඉඩමේ ස්ථානය',
     fieldLocationPlaceholder: 'ගම හෝ ඉඩමේ නම',
+    visitAddress: 'සංචාර ලිපිනය',
+    visitAddressPlaceholder: 'ගෙදර අංකය, පාර, ගම සහ හඳුනාගැනීමට උපකාරී ලකුණු',
+    visitAddressHint: 'ඔබගේ farmer profile එකේ address එක තිබ්බොත් ඒක auto use කරනවා. ඕන නම් මේ request එකට වෙනම address එකක් මෙතන දාන්නත් පුළුවන්.',
+    profileAddressFound: 'Profile address එක ලැබුණා',
+    profileAddressMissing: 'Profile address එක නෑ',
+    addressRequiredForRequest: 'Sensor visit request එකක් සඳහා සංචාර ලිපිනය අනිවාර්යයි.',
     cropType: 'වගා වර්ගය',
     cropTypePlaceholder: 'වී, බඩඉරිඟු, කෙසෙල්...',
     landSize: 'ඉඩම් ප්‍රමාණය (අක්කර)',
@@ -306,6 +374,29 @@ const uiText = {
     confidence: 'විශ්වාස මට්ටම',
     recommendations: 'නිර්දේශ',
     mySensorRequests: 'මගේ සංවේදක ඉල්ලීම්',
+    requestAll: 'සියල්ල',
+    requestView: 'බලන්න',
+    requestEdit: 'සංස්කරණය',
+    requestSave: 'වෙනස්කම් සුරකින්න',
+    requestCancel: 'අවලංගු කරන්න',
+    clearRequests: 'සියල්ල මකන්න',
+    clearRequestsConfirm: 'සියලුම සංවේදක ඉල්ලීම් මකන්න ඕනේද?',
+    deleteRequest: 'මකන්න',
+    deleteRequestConfirm: 'මේ සංවේදක ඉල්ලීම මකන්නද?',
+    requestDeleted: 'සංවේදක ඉල්ලීම මකා දමා ඇත.',
+    requestsCleared: 'සියලුම සංවේදක ඉල්ලීම් මකා දමා ඇත.',
+    requestUpdated: 'සංවේදක ඉල්ලීම යාවත්කාලීන කළා.',
+    requestDetails: 'ඉල්ලීමේ විස්තර',
+    requestSummary: 'ඉල්ලීමේ සාරාංශය',
+    requestTimeline: 'ඉල්ලීමේ කාලරේඛාව',
+    requestCreated: 'සාදන ලද්දේ',
+    requestUpdatedLabel: 'අවසන් යාවත්කාලීනය',
+    requestStatus: 'තත්වය',
+    requestPreviewTitle: 'සංවේදක ඉල්ලීමේ පෙරදසුන',
+    pendingOnlyEdit: 'සංස්කරණය කළ හැක්කේ pending ඉල්ලීම් පමණි.',
+    requestEmptyState: 'සම්පූර්ණ විස්තර බැලීමට ඉල්ලීමක් තෝරන්න.',
+    requestNoteLabel: 'ගොවි සටහන',
+    requestEditHint: 'admin තහවුරු කිරීමට පෙර pending ඉල්ලීම් වෙනස් කළ හැක.',
     noRequests:
       'තවම සංවේදක ඉල්ලීම් නැහැ. pH සහ NPK දත්ත ලබාගැනීමට ක්ෂේත්‍ර නිලධාරියෙකුගේ සංචාරයක් ඉල්ලන්න.',
     preferredDate: 'අවශ්‍ය දිනය',
@@ -408,6 +499,41 @@ function getLocalizedStatus(status: string, language: LanguageOption) {
   return 'Pending';
 }
 
+function matchesRequestFilter(status: string, filter: RequestFilter) {
+  if (filter === 'all') return true;
+  if (filter === 'pending') return status === 'pending' || status === 'approved';
+  return status === filter;
+}
+
+function buildProfileAddress(user: SidebarUser | null) {
+  if (!user) return '';
+
+  return [
+    user.address,
+    user.addressLine2,
+    user.city,
+    user.state,
+    user.country,
+    user.zipCode
+  ]
+    .filter(Boolean)
+    .join(', ')
+    .trim();
+}
+
+function seedRequestDraft(request: SoilRequest): RequestDraft {
+  return {
+    district: request.district,
+    location: request.location || '',
+    visitAddress: request.visitAddress || '',
+    cropType: request.cropType || '',
+    season: request.season || 'Maha',
+    landSize: String(request.landSize ?? 1),
+    preferredDate: request.preferredDate ? request.preferredDate.slice(0, 10) : '',
+    farmerNotes: request.farmerNotes || ''
+  };
+}
+
 function getDistrictLabel(district: string, language: LanguageOption) {
   return districtLabels[language][district] || district;
 }
@@ -486,14 +612,25 @@ export default function SoilHealthPage() {
   const [requests, setRequests] = useState<SoilRequest[]>([]);
   const [latestResult, setLatestResult] = useState<SoilRecord | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<SoilRecord | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<SoilRequest | null>(null);
+  const [requestDraft, setRequestDraft] = useState<RequestDraft>(initialRequestDraft);
+  const [requestFilter, setRequestFilter] = useState<RequestFilter>('all');
+  const [requestEditMode, setRequestEditMode] = useState(false);
   const [historyActionLoading, setHistoryActionLoading] = useState<string | null>(null);
+  const [requestActionLoading, setRequestActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [isPreviewScrolling, setIsPreviewScrolling] = useState(false);
+  const [isRequestPreviewScrolling, setIsRequestPreviewScrolling] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
   const t = uiText[form.language];
+  const profileAddress = useMemo(() => buildProfileAddress(user), [user]);
+  const filteredRequests = useMemo(
+    () => requests.filter((request) => matchesRequestFilter(request.status, requestFilter)),
+    [requestFilter, requests]
+  );
 
   const loadData = useCallback(async () => {
     if (!token) {
@@ -523,6 +660,19 @@ export default function SoilHealthPage() {
       }
       if (requestsData.success) {
         setRequests(requestsData.data);
+        setSelectedRequest((current) => {
+          if (!current) {
+            return null;
+          }
+
+          const refreshed = requestsData.data.find((request: SoilRequest) => request._id === current._id) || null;
+          if (refreshed) {
+            setRequestDraft(seedRequestDraft(refreshed));
+          } else {
+            setRequestEditMode(false);
+          }
+          return refreshed;
+        });
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t.loadFailed);
@@ -532,13 +682,43 @@ export default function SoilHealthPage() {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser) as SidebarUser;
+      setUser(parsedUser);
+
+      const storedAddress = buildProfileAddress(parsedUser);
+      if (storedAddress) {
+        setForm((current) => (current.visitAddress ? current : { ...current, visitAddress: storedAddress }));
+      }
+
+      if (token && parsedUser.id) {
+        void (async () => {
+          try {
+            const response = await fetch(`${API_URL}/users/${parsedUser.id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+              return;
+            }
+
+            const latestUser = await response.json();
+            setUser((current) => ({ ...current, ...latestUser }));
+
+            const latestAddress = buildProfileAddress(latestUser);
+            if (latestAddress) {
+              setForm((current) => (current.visitAddress ? current : { ...current, visitAddress: latestAddress }));
+            }
+          } catch {
+            // Keep local profile data when the live profile request is unavailable.
+          }
+        })();
+      }
     }
 
     if (token) {
       void loadData();
     }
-  }, [loadData, token]);
+  }, [API_URL, loadData, token]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -570,6 +750,11 @@ export default function SoilHealthPage() {
       return;
     }
 
+    if (mode === 'request' && !(form.visitAddress.trim() || profileAddress)) {
+      setError(t.addressRequiredForRequest);
+      return;
+    }
+
     if (!imageMetrics) {
       setError(t.uploadFirst);
       return;
@@ -582,6 +767,7 @@ export default function SoilHealthPage() {
     const payload = {
       district: form.district,
       location: form.location,
+      visitAddress: mode === 'request' ? form.visitAddress.trim() || profileAddress : undefined,
       cropType: form.cropType,
       season: form.season,
       language: form.language,
@@ -620,6 +806,14 @@ export default function SoilHealthPage() {
     }
   };
 
+  const openRequestPreview = (request: SoilRequest) => {
+    setSelectedRequest(request);
+    setRequestDraft(seedRequestDraft(request));
+    setRequestEditMode(false);
+    setError('');
+    setNotice('');
+  };
+
   useEffect(() => {
     if (!selectedRecord) {
       setIsPreviewScrolling(false);
@@ -647,6 +841,144 @@ export default function SoilHealthPage() {
       }
     };
   }, [selectedRecord]);
+
+  useEffect(() => {
+    if (!selectedRequest) {
+      setIsRequestPreviewScrolling(false);
+      setRequestEditMode(false);
+      return undefined;
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const handleWindowWheel = () => {
+      setIsRequestPreviewScrolling(true);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => setIsRequestPreviewScrolling(false), 700);
+    };
+
+    window.addEventListener('wheel', handleWindowWheel, { passive: true });
+    window.addEventListener('touchmove', handleWindowWheel, { passive: true });
+
+    return () => {
+      window.removeEventListener('wheel', handleWindowWheel);
+      window.removeEventListener('touchmove', handleWindowWheel);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [selectedRequest]);
+
+  const handleUpdateRequest = async () => {
+    if (!token || !selectedRequest) {
+      return;
+    }
+
+    if (selectedRequest.status !== 'pending') {
+      setNotice('');
+      setError(t.pendingOnlyEdit);
+      return;
+    }
+
+    try {
+      setRequestActionLoading(selectedRequest._id);
+      setError('');
+      setNotice('');
+
+      const response = await fetch(`${API_URL}/soil-health/requests/${selectedRequest._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...requestDraft,
+          visitAddress: requestDraft.visitAddress.trim() || profileAddress,
+          language: form.language,
+          landSize: Number(requestDraft.landSize)
+        })
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || t.requestFailed);
+      }
+
+      setSelectedRequest(result.data);
+      setRequestDraft(seedRequestDraft(result.data));
+      setRequestEditMode(false);
+      setNotice(t.requestUpdated);
+      await loadData();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : t.somethingWentWrong);
+    } finally {
+      setRequestActionLoading(null);
+    }
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!token || !window.confirm(t.deleteRequestConfirm)) {
+      return;
+    }
+
+    try {
+      setRequestActionLoading(requestId);
+      setError('');
+      setNotice('');
+      const response = await fetch(`${API_URL}/soil-health/requests/${requestId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || t.requestFailed);
+      }
+
+      setRequests((current) => current.filter((request) => request._id !== requestId));
+      if (selectedRequest?._id === requestId) {
+        setSelectedRequest(null);
+        setRequestEditMode(false);
+      }
+      setNotice(t.requestDeleted);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : t.somethingWentWrong);
+    } finally {
+      setRequestActionLoading(null);
+    }
+  };
+
+  const handleClearRequests = async () => {
+    if (!token || requests.length === 0 || !window.confirm(t.clearRequestsConfirm)) {
+      return;
+    }
+
+    try {
+      setRequestActionLoading('all');
+      setError('');
+      setNotice('');
+      const response = await fetch(`${API_URL}/soil-health/requests`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || t.requestFailed);
+      }
+
+      setRequests([]);
+      setSelectedRequest(null);
+      setRequestEditMode(false);
+      setNotice(t.requestsCleared);
+    } catch (clearError) {
+      setError(clearError instanceof Error ? clearError.message : t.somethingWentWrong);
+    } finally {
+      setRequestActionLoading(null);
+    }
+  };
 
   const handleDeleteRecord = async (recordId: string) => {
     if (!token || !window.confirm(t.deleteItemConfirm)) {
@@ -1126,6 +1458,29 @@ export default function SoilHealthPage() {
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                     />
                   </div>
+                  {mode === 'request' && (
+                    <div className="md:col-span-2">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <label className="block text-sm font-medium text-stone-700">{t.visitAddress}</label>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            profileAddress ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {profileAddress ? t.profileAddressFound : t.profileAddressMissing}
+                        </span>
+                      </div>
+                      <textarea
+                        value={form.visitAddress}
+                        onChange={(e) => setForm((current) => ({ ...current, visitAddress: e.target.value }))}
+                        rows={3}
+                        required={mode === 'request' && !profileAddress}
+                        placeholder={profileAddress || t.visitAddressPlaceholder}
+                        className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                      />
+                      <p className="mt-2 text-xs text-stone-500">{t.visitAddressHint}</p>
+                    </div>
+                  )}
                   <div>
                     <label className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>
                     <input
@@ -1314,18 +1669,49 @@ export default function SoilHealthPage() {
 
           <section className="grid gap-6 xl:grid-cols-2">
             <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-stone-900">{t.mySensorRequests}</h2>
-                <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">{requests.length}</span>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-stone-900">{t.mySensorRequests}</h2>
+                  <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">{filteredRequests.length}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearRequests}
+                  disabled={requests.length === 0 || requestActionLoading === 'all'}
+                  className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {requestActionLoading === 'all' ? t.processing : t.clearRequests}
+                </button>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {(['all', 'pending', 'completed', 'rejected'] as RequestFilter[]).map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setRequestFilter(filter)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      requestFilter === filter
+                        ? 'border-emerald-500 bg-emerald-600 text-white'
+                        : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50'
+                    }`}
+                  >
+                    {filter === 'all' ? t.requestAll : getLocalizedStatus(filter, form.language)}
+                  </button>
+                ))}
               </div>
               <div className="mt-4 space-y-3">
-                {requests.length === 0 && (
+                {filteredRequests.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm text-stone-500">
                     {t.noRequests}
                   </div>
                 )}
-                {requests.map((request) => (
-                  <div key={request._id} className="rounded-2xl border border-stone-200 p-4">
+                {filteredRequests.map((request) => (
+                  <div
+                    key={request._id}
+                    className={`rounded-2xl border p-4 transition ${
+                      selectedRequest?._id === request._id ? 'border-emerald-300 bg-emerald-50/40' : 'border-stone-200 hover:border-emerald-200 hover:bg-stone-50'
+                    }`}
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="font-semibold text-stone-900">
@@ -1351,6 +1737,35 @@ export default function SoilHealthPage() {
                         {t.adminNote}: {request.adminNotes}
                       </p>
                     )}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openRequestPreview(request)}
+                        className="rounded-full border border-stone-300 px-3 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-100"
+                      >
+                        {t.requestView}
+                      </button>
+                      {request.status === 'pending' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openRequestPreview(request);
+                            setRequestEditMode(true);
+                          }}
+                          className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                        >
+                          {t.requestEdit}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteRequest(request._id)}
+                        disabled={requestActionLoading === request._id}
+                        className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {requestActionLoading === request._id ? t.processing : t.deleteRequest}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1473,6 +1888,263 @@ export default function SoilHealthPage() {
           </section>
         </div>
       </main>
+      {selectedRequest && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/40 px-4 py-6">
+          <div className="absolute inset-0" onClick={() => {
+            setSelectedRequest(null);
+            setRequestEditMode(false);
+          }} />
+          <div className={`soil-health-modal-scroll relative z-10 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[30px] border border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#fbfffc_100%)] shadow-[0_30px_90px_-35px_rgba(21,128,61,0.35)] ${isRequestPreviewScrolling ? 'scrolling' : ''}`}>
+            <div className="sticky top-0 flex flex-wrap items-start justify-between gap-3 border-b border-emerald-100 bg-[linear-gradient(135deg,_rgba(236,253,245,0.96),_rgba(255,255,255,0.98))] px-5 py-4 backdrop-blur md:px-6">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">{t.requestPreviewTitle}</p>
+                <h3 className="mt-1 text-xl font-semibold text-stone-900">
+                  {getDistrictLabel(selectedRequest.district, form.language)}
+                  {selectedRequest.location ? ` | ${selectedRequest.location}` : ''}
+                </h3>
+                <p className="mt-1 text-sm text-stone-500">
+                  {selectedRequest.cropType || t.generalFieldCheck} | {selectedRequest.season ? getSeasonLabel(selectedRequest.season, form.language) : t.notSet}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(selectedRequest.status)}`}>
+                  {getLocalizedStatus(selectedRequest.status, form.language)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRequest(null);
+                    setRequestEditMode(false);
+                  }}
+                  aria-label={t.closePreview}
+                  title={t.closePreview}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-red-200 bg-red-500 text-white shadow-sm transition hover:bg-red-600"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <path d="M5 5l10 10M15 5L5 15" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5 md:p-6">
+              <div className="grid gap-4 md:grid-cols-[0.96fr,1.04fr]">
+                <div className="rounded-3xl bg-[linear-gradient(135deg,_#0f172a,_#1f2937_58%,_#14532d_115%)] px-5 py-6 text-white shadow-lg">
+                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">{t.requestSummary}</p>
+                  <p className="mt-3 text-4xl font-bold">{selectedRequest.imageAssessment?.score ?? '-'}</p>
+                  <p className="mt-2 text-sm text-emerald-100/90">
+                    {t.previewScore} · {selectedRequest.imageAssessment?.classification ?? t.pending}
+                  </p>
+                  <p className="mt-4 inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-sm font-semibold">
+                    {selectedRequest.imageAssessment?.soilType || t.notSet}
+                  </p>
+                  <p className="mt-5 text-sm text-emerald-100/90">{t.requestEditHint}</p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-stone-200 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)] p-4 text-sm text-stone-700 shadow-sm">
+                    <p className="text-xs text-stone-500">{t.requestStatus}</p>
+                    <p className="mt-1 font-semibold text-stone-900">{getLocalizedStatus(selectedRequest.status, form.language)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-stone-200 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)] p-4 text-sm text-stone-700 shadow-sm">
+                    <p className="text-xs text-stone-500">{t.assignedAdmin}</p>
+                    <p className="mt-1 font-semibold text-stone-900">{selectedRequest.assignedAdmin?.name || t.notAssignedYet}</p>
+                  </div>
+                  <div className="rounded-2xl border border-stone-200 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)] p-4 text-sm text-stone-700 shadow-sm">
+                    <p className="text-xs text-stone-500">{t.requestCreated}</p>
+                    <p className="mt-1 font-semibold text-stone-900">{new Date(selectedRequest.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-2xl border border-stone-200 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)] p-4 text-sm text-stone-700 shadow-sm">
+                    <p className="text-xs text-stone-500">{t.scheduledDate}</p>
+                    <p className="mt-1 font-semibold text-stone-900">
+                      {selectedRequest.scheduledDate ? new Date(selectedRequest.scheduledDate).toLocaleDateString() : t.pending}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+                  <p className="text-sm font-semibold text-stone-900">{t.requestDetails}</p>
+                  {!requestEditMode ? (
+                    <div className="mt-3 grid gap-3 text-sm text-stone-700">
+                      <p><span className="text-stone-500">{t.district}:</span> {getDistrictLabel(selectedRequest.district, form.language)}</p>
+                      <p><span className="text-stone-500">{t.fieldLocation}:</span> {selectedRequest.location || t.notSet}</p>
+                      <p><span className="text-stone-500">{t.visitAddress}:</span> {selectedRequest.visitAddress || t.notSet}</p>
+                      <p><span className="text-stone-500">{t.cropType}:</span> {selectedRequest.cropType || t.generalFieldCheck}</p>
+                      <p><span className="text-stone-500">{t.season}:</span> {selectedRequest.season ? getSeasonLabel(selectedRequest.season, form.language) : t.notSet}</p>
+                      <p><span className="text-stone-500">{t.landSize}:</span> {selectedRequest.landSize ?? t.notSet}</p>
+                      <p><span className="text-stone-500">{t.preferredDate}:</span> {selectedRequest.preferredDate ? new Date(selectedRequest.preferredDate).toLocaleDateString() : t.notSet}</p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 grid gap-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
+                        <select
+                          value={requestDraft.district}
+                          onChange={(event) => setRequestDraft((current) => ({ ...current, district: event.target.value }))}
+                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        >
+                          {DISTRICTS.map((district) => (
+                            <option key={district} value={district}>
+                              {getDistrictLabel(district, form.language)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
+                        <input
+                          value={requestDraft.location}
+                          onChange={(event) => setRequestDraft((current) => ({ ...current, location: event.target.value }))}
+                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-stone-700">{t.visitAddress}</label>
+                        <textarea
+                          value={requestDraft.visitAddress}
+                          onChange={(event) => setRequestDraft((current) => ({ ...current, visitAddress: event.target.value }))}
+                          rows={3}
+                          placeholder={profileAddress || t.visitAddressPlaceholder}
+                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
+                        <input
+                          value={requestDraft.cropType}
+                          onChange={(event) => setRequestDraft((current) => ({ ...current, cropType: event.target.value }))}
+                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-stone-700">{t.season}</label>
+                          <select
+                            value={requestDraft.season}
+                            onChange={(event) => setRequestDraft((current) => ({ ...current, season: event.target.value }))}
+                            className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                          >
+                            {SEASONS.map((season) => (
+                              <option key={season} value={season}>
+                                {getSeasonLabel(season, form.language)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>
+                          <input
+                            type="number"
+                            min="0.25"
+                            step="0.25"
+                            value={requestDraft.landSize}
+                            onChange={(event) => setRequestDraft((current) => ({ ...current, landSize: event.target.value }))}
+                            className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-stone-700">{t.preferredVisitDate}</label>
+                        <input
+                          type="date"
+                          value={requestDraft.preferredDate}
+                          onChange={(event) => setRequestDraft((current) => ({ ...current, preferredDate: event.target.value }))}
+                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+                  <p className="text-sm font-semibold text-stone-900">{t.requestTimeline}</p>
+                  {!requestEditMode ? (
+                    <div className="mt-3 space-y-3">
+                      <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 text-sm text-stone-700">
+                        <p className="text-xs text-stone-500">{t.requestNoteLabel}</p>
+                        <p className="mt-1">{selectedRequest.farmerNotes || t.notSet}</p>
+                      </div>
+                      <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 text-sm text-stone-700">
+                        <p className="text-xs text-stone-500">{t.adminNote}</p>
+                        <p className="mt-1">{selectedRequest.adminNotes || t.notAssignedYet}</p>
+                      </div>
+                      <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 text-sm text-stone-700">
+                        <p className="text-xs text-stone-500">{t.preferredDate}</p>
+                        <p className="mt-1">
+                          {selectedRequest.preferredDate ? new Date(selectedRequest.preferredDate).toLocaleDateString() : t.notSet}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <label className="mb-1 block text-sm font-medium text-stone-700">{t.requestNoteLabel}</label>
+                      <textarea
+                        value={requestDraft.farmerNotes}
+                        onChange={(event) => setRequestDraft((current) => ({ ...current, farmerNotes: event.target.value }))}
+                        rows={8}
+                        className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        placeholder={t.notePlaceholder}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                {!requestEditMode && selectedRequest.status === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={() => setRequestEditMode(true)}
+                    className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
+                  >
+                    {t.requestEdit}
+                  </button>
+                )}
+                {requestEditMode && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleUpdateRequest()}
+                      disabled={requestActionLoading === selectedRequest._id}
+                      className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {requestActionLoading === selectedRequest._id ? t.processing : t.requestSave}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRequestDraft(seedRequestDraft(selectedRequest));
+                        setRequestEditMode(false);
+                      }}
+                      className="rounded-2xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-100"
+                    >
+                      {t.requestCancel}
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteRequest(selectedRequest._id)}
+                  disabled={requestActionLoading === selectedRequest._id}
+                  className="rounded-2xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {requestActionLoading === selectedRequest._id ? t.processing : t.deleteRequest}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {selectedRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4 py-6">
           <div className="absolute inset-0" onClick={() => setSelectedRecord(null)} />
