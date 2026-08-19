@@ -38,6 +38,7 @@ interface PastCropDetails {
   endMonth: string;
   endYear: string;
   fertilizers: ChemicalItem[];
+  pesticides?: ChemicalItem[];
 }
 
 interface EvaluationResult {
@@ -55,7 +56,7 @@ interface EvaluationResult {
     difference: number;
     targetMin?: number; 
     targetMax?: number; 
-    breakdown: MathBreakdown;
+    breakdown?: MathBreakdown;
   }[];
   alternativeSuggestions?: {
     cropName: string;
@@ -76,7 +77,6 @@ const LAND_SIZES = [
   { label: '50 Acres', value: 50 }, { label: '100 Acres', value: 100 }
 ];
 
-// සැබෑ ලෝකයේ පොහොර යොදන ප්‍රමාණයන්
 const AMOUNTS = [
   { label: '5kg', value: 5000 }, 
   { label: '10kg', value: 10000 },
@@ -89,8 +89,6 @@ const AMOUNTS = [
 const FERTILIZER_OPTIONS = [
   'Urea', 'TSP (Triple Super Phosphate)', 'MOP (Muriate of Potash)', 'NPK 15-15-15', 'Dolomite', 'Compost / Organic', 'Ammonium Sulfate (SOA)', 'Eppawala Rock Phosphate (ERP)', 'NPK 12-12-17'
 ];
-
-const SOIL_TYPES = ['Sandy', 'Loam', 'Clay'];
 
 const SQ_FT_PER_ACRE = 43560;
 
@@ -107,14 +105,10 @@ export default function RotationPlanPage() {
   const [currentDate, setCurrentDate] = useState('');
   const [targetCrop, setTargetCrop] = useState('');
   const [targetLandSize, setTargetLandSize] = useState<number>(1);
-  
-  const [soilType, setSoilType] = useState('Loam');
-  const [phLevel, setPhLevel] = useState<number>(6.5);
-  const [rainfall, setRainfall] = useState<number>(1500);
 
   const [language, setLanguage] = useState('English');
   const [pastCrops, setPastCrops] = useState<PastCropDetails[]>([
-    { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [] }
+    { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [], pesticides: [] }
   ]);
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -152,7 +146,7 @@ export default function RotationPlanPage() {
 
   const handleAddFertilizer = (cropIndex: number) => {
     const updatedCrops = [...pastCrops];
-    updatedCrops[cropIndex].fertilizers.push({ name: FERTILIZER_OPTIONS[0], amount_g: 5000 }); // Default 5kg
+    updatedCrops[cropIndex].fertilizers.push({ name: FERTILIZER_OPTIONS[0], amount_g: 5000 });
     setPastCrops(updatedCrops);
   };
 
@@ -168,7 +162,7 @@ export default function RotationPlanPage() {
     setPastCrops(updatedCrops);
   };
 
-  const addCropField = () => setPastCrops([...pastCrops, { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [] }]);
+  const addCropField = () => setPastCrops([...pastCrops, { cropName: '', landSize: 1, startMonth: '', startYear: '', endMonth: '', endYear: '', fertilizers: [], pesticides: [] }]);
   const removeCropField = (index: number) => setPastCrops(pastCrops.filter((_, i) => i !== index));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,17 +177,20 @@ export default function RotationPlanPage() {
 
     try {
       const token = localStorage.getItem('token');
+      // Payload prepared with past crops matching backend expectation
+      const formattedPreviousCrops = pastCrops.map(crop => ({
+        ...crop,
+        pesticides: crop.pesticides || []
+      }));
+
       const res = await fetch('http://localhost:5000/api/rotation/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ 
           targetCrop, 
           targetLandSize, 
-          soilType, 
-          phLevel, 
-          rainfall, 
           currentMonth: currentDate, 
-          previousCrops: pastCrops, 
+          previousCrops: formattedPreviousCrops, 
           language 
         }),
       });
@@ -208,7 +205,6 @@ export default function RotationPlanPage() {
       setLoading(false);
     }
   };
-
 
   const handleGetAlternatives = async () => {
     if (!evaluation) return;
@@ -259,7 +255,7 @@ export default function RotationPlanPage() {
 
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <h1 className="text-xl font-semibold text-green-800">Crop Rotation & Soil Evaluator</h1>
-            <p className="text-xs text-gray-500 mt-1">Analyze historical data and environmental factors for nutrient predictions</p>
+            <p className="text-xs text-gray-500 mt-1">Analyze historical crop data for nutrient predictions and suitability</p>
           </div>
 
           {infoMessage && (
@@ -327,49 +323,8 @@ export default function RotationPlanPage() {
             </div>
 
             <div className="bg-white rounded-lg border border-gray-200">
-              <div className="px-4 py-2 bg-blue-600">
-                <h2 className="text-xs font-semibold text-white">2. Environmental Factors</h2>
-              </div>
-              <div className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-medium text-black mb-1">Soil Type</label>
-                    <select
-                      value={soilType}
-                      onChange={(e) => setSoilType(e.target.value)}
-                      className="text-black w-full text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-blue-400 outline-none"
-                    >
-                      {SOIL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-medium text-black mb-1">Soil pH Level</label>
-                    <input
-                      type="number"
-                      step="0.1" min="4.0" max="9.0" required
-                      value={phLevel}
-                      onChange={(e) => setPhLevel(Number(e.target.value))}
-                      className="text-black w-full text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-blue-400 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-medium text-black mb-1">Seasonal Rainfall (mm)</label>
-                    <input
-                      type="number"
-                      step="10" min="200" max="5000" required
-                      value={rainfall}
-                      onChange={(e) => setRainfall(Number(e.target.value))}
-                      className="text-black w-full text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-blue-400 outline-none"
-                    />
-                  </div>
-                </div>
-                <p className="text-[9px] text-gray-500 mt-2">*These factors help the calculation of nutrient leaching and retention.</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-2 bg-green-50 border-b border-gray-200">
-                <h2 className="text-xs font-semibold text-green-800">3. Historical Crop Timeline</h2>
+                <h2 className="text-xs font-semibold text-green-800">2. Historical Crop Timeline</h2>
               </div>
               <div className="p-4 space-y-3">
                 {pastCrops.map((crop, index) => (
@@ -494,15 +449,6 @@ export default function RotationPlanPage() {
                   </span>
                 </div>
 
-                <div className="mt-3 bg-white/60 p-3 rounded border border-gray-200 shadow-sm">
-                   <h4 className="text-[10px] font-bold text-gray-700 mb-2 border-b pb-1">Environmental Impact on ML Prediction</h4>
-                   <ul className="text-[10px] text-gray-600 space-y-1">
-                     <li><span className="font-semibold text-gray-800">Soil Retention:</span> Model adjusted nutrient retention based on <b>{soilType}</b> soil characteristics.</li>
-                     <li><span className="font-semibold text-gray-800">Phosphorus Availability:</span> pH level of <b>{phLevel}</b> affected the lock/release mechanism of Phosphorus.</li>
-                     <li><span className="font-semibold text-gray-800">Nitrogen Leaching:</span> Seasonal rainfall of <b>{rainfall}mm</b> factored into Nitrogen washing rates.</li>
-                   </ul>
-                </div>
-
                 {!showAIAssistance ? (
                   <div className="mt-4 pt-3 border-t border-gray-200/60 flex justify-center">
                     <button
@@ -571,10 +517,10 @@ export default function RotationPlanPage() {
               {/* Main Visual Indicator: Current Soil vs Target Requirements */}
               <div className="bg-white p-4 rounded-lg border border-gray-200">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
-                   <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Current Soil Level vs Target Requirements</h3>
-                   <span className="text-[9px] text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200 font-medium">
-                     💡 <span className="font-bold">Current</span> = Baseline + ML Predict - Env Loss
-                   </span>
+                  <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Current Soil Level vs Target Requirements</h3>
+                  <span className="text-[9px] text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200 font-medium">
+                    💡 <span className="font-bold">Current</span> = Predicted by Crop Timeline
+                  </span>
                 </div>
                 
                 <div className="flex flex-col gap-3">
@@ -596,7 +542,6 @@ export default function RotationPlanPage() {
                     const goodMin = goodSoilNutrient?.min || 0;
                     const goodMax = goodSoilNutrient?.max || 100;
 
-                    // Progress bar එකේ පළල සැකසීමට උපරිම අගය ගණනය කිරීම (Good Soil Max එකත් ඇතුළත් කර)
                     const maxGraph = Math.max(currentVal, maxVal, goodMax) * 1.1; 
                     const currentPct = (currentVal / maxGraph) * 100;
                     const minPct = (minVal / maxGraph) * 100;
@@ -646,46 +591,14 @@ export default function RotationPlanPage() {
                           </div>
                           
                           {item.targetMax !== 999999 && (
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] w-24 text-gray-500 font-bold uppercase tracking-wider">{targetCrop} Target Max</span>
-                            <div className="flex-1 bg-white border border-gray-200 rounded-full h-1.5 overflow-hidden opacity-70">
-                              <div className="h-full rounded-full bg-blue-600 transition-all duration-1000" style={{ width: `${maxPct}%` }}></div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[9px] w-24 text-gray-500 font-bold uppercase tracking-wider">{targetCrop} Target Max</span>
+                              <div className="flex-1 bg-white border border-gray-200 rounded-full h-1.5 overflow-hidden opacity-70">
+                                <div className="h-full rounded-full bg-blue-600 transition-all duration-1000" style={{ width: `${maxPct}%` }}></div>
+                              </div>
+                              <span className="text-[9px] font-bold text-gray-600 w-12 text-right">{displayMax}</span>
                             </div>
-                            <span className="text-[9px] font-bold text-gray-600 w-12 text-right">{displayMax}</span>
-                          </div>
                           )}
-
-                          {/* Soil Calculation Breakdown */}
-                          <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
-                             <h5 className="text-[10px] font-bold text-gray-700 mb-1.5 uppercase flex justify-between">
-                               Soil Calculation Breakdown:
-                               <span className="text-[9px] font-normal text-gray-500 bg-gray-100 px-1.5 rounded lowercase">baseline + ml predict - env loss = current</span>
-                             </h5>
-                             <div className="flex items-center gap-2 text-[10px] font-medium text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
-                                <div className="text-center flex-1">
-                                  <span className="block text-[8px] text-gray-400">Baseline</span>
-                                  <span className="font-bold text-blue-700">{item.breakdown?.base !== undefined ? item.breakdown.base.toFixed(2) : '0.00'}</span>
-                                </div>
-                                <span className="text-gray-400">+</span>
-                                <div className="text-center flex-1">
-                                  <span className="block text-[8px] text-gray-400">ML Predict</span>
-                                  <span className={`font-bold ${item.breakdown?.ml >= 0 ? 'text-green-600' : 'text-orange-500'}`}>
-                                    {item.breakdown?.ml > 0 ? '+' : ''}
-                                    {item.breakdown?.ml !== undefined ? item.breakdown.ml.toFixed(2) : '0.00'}
-                                  </span>
-                                </div>
-                                <span className="text-gray-400">-</span>
-                                <div className="text-center flex-1">
-                                  <span className="block text-[8px] text-gray-400">Env Loss</span>
-                                  <span className="font-bold text-red-500">{item.breakdown?.loss !== undefined ? item.breakdown.loss.toFixed(2) : '0.00'}</span>
-                                </div>
-                                <span className="text-gray-400">=</span>
-                                <div className="text-center flex-1 bg-white border border-gray-200 py-0.5 rounded shadow-sm">
-                                  <span className="block text-[8px] text-gray-400">Current</span>
-                                  <span className="font-bold text-gray-900">{currentVal.toFixed(2)}</span>
-                                </div>
-                             </div>
-                          </div>
 
                           {/* Good Soil (Fertile) Indicator & Detailed Status Box */}
                           {goodSoilNutrient && (
@@ -693,7 +606,6 @@ export default function RotationPlanPage() {
                               <h5 className="text-[10px] font-bold text-gray-700 mb-1.5 uppercase">Good Soil (Fertile) Analysis:</h5>
                               <div className="flex items-center gap-3">
                                 <div className="flex-1 relative h-4 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center">
-                                  {/* The fertile range background */}
                                   <div 
                                     className="absolute h-full bg-teal-200 border-x border-teal-500 opacity-60" 
                                     style={{ 
@@ -701,7 +613,6 @@ export default function RotationPlanPage() {
                                       width: `${((goodMax - goodMin) / maxGraph) * 100}%` 
                                     }}
                                   ></div>
-                                  {/* The Current level pointer */}
                                   <div 
                                     className="absolute h-full w-2 bg-gray-800 rounded shadow-md z-10" 
                                     style={{ left: `calc(${(currentVal / maxGraph) * 100}% - 4px)` }}
@@ -714,20 +625,19 @@ export default function RotationPlanPage() {
                               
                               <div className="mt-2 space-y-1">
                                 <div className="flex justify-between items-center bg-white p-1.5 rounded border border-gray-100">
-                                   <span className="text-[10px] text-gray-600 font-medium">Status vs Fertile Limits:</span>
-                                   {isBelowGood && <span className="text-[9px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">BELOW MINIMUM (Short by ${(goodMin - currentVal).toFixed(1)})</span>}
-                                   {isWithinGood && <span className="text-[9px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">WITHIN FERTILE RANGE</span>}
-                                   {isAboveGood && <span className="text-[9px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded">EXCEEDS MAXIMUM (Over by ${(currentVal - goodMax).toFixed(1)})</span>}
+                                  <span className="text-[10px] text-gray-600 font-medium">Status vs Fertile Limits:</span>
+                                  {isBelowGood && <span className="text-[9px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">BELOW MINIMUM (Short by {(goodMin - currentVal).toFixed(1)})</span>}
+                                  {isWithinGood && <span className="text-[9px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">WITHIN FERTILE RANGE</span>}
+                                  {isAboveGood && <span className="text-[9px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded">EXCEEDS MAXIMUM (Over by {(currentVal - goodMax).toFixed(1)})</span>}
                                 </div>
                                 
                                 <div className="flex justify-between items-center bg-white p-1.5 rounded border border-gray-100">
-                                   <span className="text-[10px] text-gray-600 font-medium">Status vs Target Crop ({targetCrop}):</span>
-                                   {isDeficit && <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">CROP DEFICIT (Needs ${(minVal - currentVal).toFixed(1)} more)</span>}
-                                   {isOptimal && <span className="text-[9px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">OPTIMAL FOR CROP</span>}
-                                   {status === 'Surplus' && <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded">CROP SURPLUS (Over by ${(currentVal - maxVal).toFixed(1)})</span>}
+                                  <span className="text-[10px] text-gray-600 font-medium">Status vs Target Crop ({targetCrop}):</span>
+                                  {isDeficit && <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">CROP DEFICIT (Needs {(minVal - currentVal).toFixed(1)} more)</span>}
+                                  {isOptimal && <span className="text-[9px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">OPTIMAL FOR CROP</span>}
+                                  {status === 'Surplus' && <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded">CROP SURPLUS (Over by {(currentVal - maxVal).toFixed(1)})</span>}
                                 </div>
                               </div>
-
                             </div>
                           )}
 
@@ -739,7 +649,6 @@ export default function RotationPlanPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                
                 {evaluation.chemicalBreakdown && evaluation.chemicalBreakdown.length > 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-3 bg-green-50 border-b border-green-100 flex justify-between items-center">
