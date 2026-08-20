@@ -13,6 +13,10 @@ interface ImageMetrics {
   redMean: number;
   greenMean: number;
   blueMean: number;
+  earthyRatio: number;
+  blueRatio: number;
+  greenRatio: number;
+  edgeDensity: number;
 }
 
 interface SoilRecord {
@@ -86,6 +90,20 @@ interface RequestDraft {
   landSize: string;
   preferredDate: string;
   farmerNotes: string;
+}
+
+interface PopupState {
+  type: 'info' | 'confirm';
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  action?:
+    | { kind: 'deleteRequest'; targetId: string }
+    | { kind: 'clearRequests' }
+    | { kind: 'deleteRecord'; targetId: string }
+    | { kind: 'clearHistory' }
+    | null;
 }
 
 interface SidebarUser {
@@ -225,6 +243,14 @@ const uiText = {
     profileAddressFound: 'Profile address found',
     profileAddressMissing: 'Profile address missing',
     addressRequiredForRequest: 'A visit address is required for sensor visit requests.',
+    invalidPhotoTitle: 'Invalid soil photo',
+    invalidPhotoMessage:
+      'This image does not look like a soil close-up photo. Please upload a clear photo of soil only.',
+    popupOkay: 'Okay',
+    popupCancel: 'Cancel',
+    popupConfirm: 'Confirm',
+    confirmDeleteTitle: 'Delete item?',
+    confirmClearTitle: 'Clear all items?',
     cropType: 'Crop type',
     cropTypePlaceholder: 'Paddy, maize, banana...',
     landSize: 'Land size (acres)',
@@ -344,6 +370,14 @@ const uiText = {
     profileAddressFound: 'Profile address එක ලැබුණා',
     profileAddressMissing: 'Profile address එක නෑ',
     addressRequiredForRequest: 'Sensor visit request එකක් සඳහා සංචාර ලිපිනය අනිවාර්යයි.',
+    invalidPhotoTitle: 'වලංගු නොවන පස් ඡායාරූපය',
+    invalidPhotoMessage:
+      'මේ image එක පස් close-up photo එකක් වගේ පේන්නේ නැහැ. කරුණාකර පස පමණක් පේන පැහැදිලි ඡායාරූපයක් upload කරන්න.',
+    popupOkay: 'හරි',
+    popupCancel: 'අවලංගු කරන්න',
+    popupConfirm: 'තහවුරු කරන්න',
+    confirmDeleteTitle: 'item එක මකන්නද?',
+    confirmClearTitle: 'සියල්ල මකන්නද?',
     cropType: 'වගා වර්ගය',
     cropTypePlaceholder: 'වී, බඩඉරිඟු, කෙසෙල්...',
     landSize: 'ඉඩම් ප්‍රමාණය (අක්කර)',
@@ -521,6 +555,66 @@ function buildProfileAddress(user: SidebarUser | null) {
     .trim();
 }
 
+function rgbToHsv(red: number, green: number, blue: number) {
+  const r = red / 255;
+  const g = green / 255;
+  const b = blue / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+
+  let hue = 0;
+  if (delta !== 0) {
+    if (max === r) {
+      hue = 60 * (((g - b) / delta) % 6);
+    } else if (max === g) {
+      hue = 60 * ((b - r) / delta + 2);
+    } else {
+      hue = 60 * ((r - g) / delta + 4);
+    }
+  }
+
+  if (hue < 0) {
+    hue += 360;
+  }
+
+  const saturation = max === 0 ? 0 : delta / max;
+  const value = max;
+
+  return { hue, saturation, value };
+}
+
+function isLikelySoilPhoto(imageMetrics: ImageMetrics) {
+  const {
+    brightness,
+    textureScore,
+    redMean,
+    greenMean,
+    blueMean,
+    earthyRatio,
+    blueRatio,
+    greenRatio,
+    edgeDensity
+  } = imageMetrics;
+  const channelSpread = Math.max(redMean, greenMean, blueMean) - Math.min(redMean, greenMean, blueMean);
+
+  const hasEarthDominance = earthyRatio >= 0.34;
+  const hasLowBlueScene = blueRatio <= 0.22;
+  const hasLowVegetation = greenRatio <= 0.28;
+  const hasCloseTexture = textureScore >= 24 && edgeDensity >= 0.12;
+  const hasBalancedLight = brightness >= 35 && brightness <= 205;
+  const hasBalancedChannels = channelSpread <= 105 && redMean >= blueMean - 5;
+
+  return (
+    hasEarthDominance &&
+    hasLowBlueScene &&
+    hasLowVegetation &&
+    hasCloseTexture &&
+    hasBalancedLight &&
+    hasBalancedChannels
+  );
+}
+
 function seedRequestDraft(request: SoilRequest): RequestDraft {
   return {
     district: request.district,
@@ -572,19 +666,40 @@ async function extractImageMetrics(file: File): Promise<ImageMetrics> {
   let g = 0;
   let b = 0;
   let brightness = 0;
+  let earthyPixels = 0;
+  let bluePixels = 0;
+  let greenPixels = 0;
+  let edgePixels = 0;
   const brightnessValues: number[] = [];
+  const brightnessGrid: number[] = new Array(224 * 224).fill(0);
 
-  for (let i = 0; i < data.length; i += 4) {
-    const red = data[i];
-    const green = data[i + 1];
-    const blue = data[i + 2];
-    const pixelBrightness = 0.299 * red + 0.587 * green + 0.114 * blue;
+  for (let y = 0; y < 224; y += 1) {
+    for (let x = 0; x < 224; x += 1) {
+      const pixelIndex = y * 224 + x;
+      const i = pixelIndex * 4;
+      const red = data[i];
+      const green = data[i + 1];
+      const blue = data[i + 2];
+      const pixelBrightness = 0.299 * red + 0.587 * green + 0.114 * blue;
+      const { hue, saturation, value } = rgbToHsv(red, green, blue);
 
-    r += red;
-    g += green;
-    b += blue;
-    brightness += pixelBrightness;
-    brightnessValues.push(pixelBrightness);
+      const isEarthTone =
+        ((hue >= 8 && hue <= 55 && saturation >= 0.14 && saturation <= 0.78 && value >= 0.14 && value <= 0.88) ||
+          (saturation <= 0.24 && value >= 0.16 && value <= 0.72));
+      const isBlueScene = hue >= 185 && hue <= 260 && saturation >= 0.18 && value >= 0.22;
+      const isGreenScene = hue >= 70 && hue <= 170 && saturation >= 0.18 && value >= 0.18;
+
+      r += red;
+      g += green;
+      b += blue;
+      brightness += pixelBrightness;
+      brightnessValues.push(pixelBrightness);
+      brightnessGrid[pixelIndex] = pixelBrightness;
+
+      if (isEarthTone) earthyPixels += 1;
+      if (isBlueScene) bluePixels += 1;
+      if (isGreenScene) greenPixels += 1;
+    }
   }
 
   const totalPixels = brightnessValues.length || 1;
@@ -592,12 +707,28 @@ async function extractImageMetrics(file: File): Promise<ImageMetrics> {
   const variance =
     brightnessValues.reduce((sum, value) => sum + (value - avgBrightness) ** 2, 0) / totalPixels;
 
+  for (let y = 0; y < 223; y += 1) {
+    for (let x = 0; x < 223; x += 1) {
+      const current = brightnessGrid[y * 224 + x];
+      const right = brightnessGrid[y * 224 + (x + 1)];
+      const down = brightnessGrid[(y + 1) * 224 + x];
+
+      if (Math.abs(current - right) > 18 || Math.abs(current - down) > 18) {
+        edgePixels += 1;
+      }
+    }
+  }
+
   return {
     brightness: Number(avgBrightness.toFixed(2)),
     textureScore: Number(Math.min(100, Math.sqrt(variance)).toFixed(2)),
     redMean: Number((r / totalPixels).toFixed(2)),
     greenMean: Number((g / totalPixels).toFixed(2)),
-    blueMean: Number((b / totalPixels).toFixed(2))
+    blueMean: Number((b / totalPixels).toFixed(2)),
+    earthyRatio: Number((earthyPixels / totalPixels).toFixed(4)),
+    blueRatio: Number((bluePixels / totalPixels).toFixed(4)),
+    greenRatio: Number((greenPixels / totalPixels).toFixed(4)),
+    edgeDensity: Number((edgePixels / totalPixels).toFixed(4))
   };
 }
 
@@ -622,6 +753,7 @@ export default function SoilHealthPage() {
   const [notice, setNotice] = useState('');
   const [isPreviewScrolling, setIsPreviewScrolling] = useState(false);
   const [isRequestPreviewScrolling, setIsRequestPreviewScrolling] = useState(false);
+  const [popup, setPopup] = useState<PopupState | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
@@ -679,6 +811,30 @@ export default function SoilHealthPage() {
     }
   }, [API_URL, t.backendUnavailable, t.loadFailed, t.signInToLoad, token]);
 
+  const showInfoPopup = useCallback((title: string, message: string) => {
+    setPopup({
+      type: 'info',
+      title,
+      message,
+      confirmLabel: t.popupOkay,
+      action: null
+    });
+  }, [t.popupOkay]);
+
+  const showConfirmPopup = useCallback(
+    (title: string, message: string, action: NonNullable<PopupState['action']>, confirmLabel?: string) => {
+      setPopup({
+        type: 'confirm',
+        title,
+        message,
+        confirmLabel: confirmLabel || t.popupConfirm,
+        cancelLabel: t.popupCancel,
+        action
+      });
+    },
+    [t.popupCancel, t.popupConfirm]
+  );
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -732,10 +888,16 @@ export default function SoilHealthPage() {
       return;
     }
 
-    setMetricsPreview(URL.createObjectURL(file));
-
     try {
       const metrics = await extractImageMetrics(file);
+      if (!isLikelySoilPhoto(metrics)) {
+        setImageMetrics(null);
+        setMetricsPreview('');
+        event.target.value = '';
+        showInfoPopup(t.invalidPhotoTitle, t.invalidPhotoMessage);
+        return;
+      }
+      setMetricsPreview(URL.createObjectURL(file));
       setImageMetrics(metrics);
     } catch {
       setError(t.imagePreviewFailed);
@@ -918,8 +1080,8 @@ export default function SoilHealthPage() {
     }
   };
 
-  const handleDeleteRequest = async (requestId: string) => {
-    if (!token || !window.confirm(t.deleteRequestConfirm)) {
+  const executeDeleteRequest = async (requestId: string) => {
+    if (!token) {
       return;
     }
 
@@ -950,8 +1112,8 @@ export default function SoilHealthPage() {
     }
   };
 
-  const handleClearRequests = async () => {
-    if (!token || requests.length === 0 || !window.confirm(t.clearRequestsConfirm)) {
+  const executeClearRequests = async () => {
+    if (!token || requests.length === 0) {
       return;
     }
 
@@ -980,8 +1142,8 @@ export default function SoilHealthPage() {
     }
   };
 
-  const handleDeleteRecord = async (recordId: string) => {
-    if (!token || !window.confirm(t.deleteItemConfirm)) {
+  const executeDeleteRecord = async (recordId: string) => {
+    if (!token) {
       return;
     }
 
@@ -1013,8 +1175,8 @@ export default function SoilHealthPage() {
     }
   };
 
-  const handleClearHistory = async () => {
-    if (!token || history.length === 0 || !window.confirm(t.clearHistoryConfirm)) {
+  const executeClearHistory = async () => {
+    if (!token || history.length === 0) {
       return;
     }
 
@@ -1039,6 +1201,50 @@ export default function SoilHealthPage() {
       setError(clearError instanceof Error ? clearError.message : t.somethingWentWrong);
     } finally {
       setHistoryActionLoading(null);
+    }
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    showConfirmPopup(t.confirmDeleteTitle, t.deleteRequestConfirm, { kind: 'deleteRequest', targetId: requestId }, t.deleteRequest);
+  };
+
+  const handleClearRequests = async () => {
+    if (requests.length === 0) return;
+    showConfirmPopup(t.confirmClearTitle, t.clearRequestsConfirm, { kind: 'clearRequests' }, t.clearRequests);
+  };
+
+  const handleDeleteRecord = async (recordId: string) => {
+    showConfirmPopup(t.confirmDeleteTitle, t.deleteItemConfirm, { kind: 'deleteRecord', targetId: recordId }, t.deleteItem);
+  };
+
+  const handleClearHistory = async () => {
+    if (history.length === 0) return;
+    showConfirmPopup(t.confirmClearTitle, t.clearHistoryConfirm, { kind: 'clearHistory' }, t.clearHistory);
+  };
+
+  const handlePopupConfirm = async () => {
+    if (!popup?.action) {
+      setPopup(null);
+      return;
+    }
+
+    const currentAction = popup.action;
+    setPopup(null);
+
+    if (currentAction.kind === 'deleteRequest') {
+      await executeDeleteRequest(currentAction.targetId);
+      return;
+    }
+    if (currentAction.kind === 'clearRequests') {
+      await executeClearRequests();
+      return;
+    }
+    if (currentAction.kind === 'deleteRecord') {
+      await executeDeleteRecord(currentAction.targetId);
+      return;
+    }
+    if (currentAction.kind === 'clearHistory') {
+      await executeClearHistory();
     }
   };
 
@@ -1888,8 +2094,49 @@ export default function SoilHealthPage() {
           </section>
         </div>
       </main>
+      {popup && (
+        <div className="fixed inset-0 z-[70] bg-stone-950/35 backdrop-blur-sm">
+          <div className="pointer-events-none flex justify-center px-4 pt-6">
+            <div className="popup-slide-down pointer-events-auto w-full max-w-lg rounded-[28px] border border-emerald-100 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(247,254,250,0.98))] shadow-[0_28px_80px_-34px_rgba(15,23,42,0.5)]">
+              <div className="border-b border-emerald-100 px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
+                  {popup.type === 'confirm' ? t.popupConfirm : t.popupOkay}
+                </p>
+                <h3 className="mt-1 text-xl font-semibold text-stone-900">{popup.title}</h3>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-sm leading-6 text-stone-600">{popup.message}</p>
+                <div className="mt-5 flex flex-wrap justify-end gap-3">
+                  {popup.type === 'confirm' && (
+                    <button
+                      type="button"
+                      onClick={() => setPopup(null)}
+                      className="rounded-2xl border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
+                    >
+                      {popup.cancelLabel || t.popupCancel}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (popup.type === 'confirm') {
+                        void handlePopupConfirm();
+                        return;
+                      }
+                      setPopup(null);
+                    }}
+                    className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                  >
+                    {popup.confirmLabel || t.popupOkay}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {selectedRequest && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/40 px-4 py-6">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/40 px-4 py-6 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => {
             setSelectedRequest(null);
             setRequestEditMode(false);
@@ -2146,7 +2393,7 @@ export default function SoilHealthPage() {
         </div>
       )}
       {selectedRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4 py-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4 py-6 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setSelectedRecord(null)} />
           <div className={`soil-health-modal-scroll relative z-10 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[30px] border border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#fbfffc_100%)] shadow-[0_30px_90px_-35px_rgba(21,128,61,0.35)] ${isPreviewScrolling ? 'scrolling' : ''}`}>
             <div className="sticky top-0 flex flex-wrap items-start justify-between gap-3 border-b border-emerald-100 bg-[linear-gradient(135deg,_rgba(236,253,245,0.96),_rgba(255,255,255,0.98))] px-5 py-4 backdrop-blur md:px-6">
@@ -2252,6 +2499,21 @@ export default function SoilHealthPage() {
         </div>
       )}
       <style jsx global>{`
+        .popup-slide-down {
+          animation: soil-health-popup-slide 220ms ease-out;
+        }
+
+        @keyframes soil-health-popup-slide {
+          0% {
+            opacity: 0;
+            transform: translateY(-18px) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
         .soil-health-modal-scroll {
           scrollbar-width: thin;
           scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
