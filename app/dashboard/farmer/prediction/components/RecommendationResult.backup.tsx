@@ -546,6 +546,8 @@ export default function RecommendationResult({
       <MLPredictionOutput
         bestPredictedMarket={best_predicted_market}
         horizon={input?.horizon}
+        actionDecision="UNCERTAIN"
+        actionDecisionMessage="Timing advantage is uncertain"
       />
 
       {/* Recommendation Banner */}

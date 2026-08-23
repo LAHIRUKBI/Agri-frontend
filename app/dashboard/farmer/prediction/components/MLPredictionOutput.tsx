@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  type ActionDecision,
+  getActionDecisionLabel,
+} from '../recommendationContract';
+
 type ProbabilityMap = {
   UP?: number | string;
   DOWN?: number | string;
@@ -32,6 +37,9 @@ type MarketLike =
       market_context_signal?: MarketContextSignal | null;
       market_trend?: string | null;
       market_trend_message?: string | null;
+      action_decision?: 'SELL_NOW' | 'WAIT' | 'UNCERTAIN' | null;
+      action_decision_message?: string | null;
+      action_reason_codes?: string[];
     }
   | null
   | undefined;
@@ -42,9 +50,10 @@ type Props = {
   horizon?: number;
   priceSourceMode?: 'manual' | 'system_reference';
   currentPrice?: number | null;
+  actionDecision: ActionDecision;
+  actionDecisionMessage: string;
+  actionReasonCodes?: string[];
 };
-
-const MODEL_ACCURACY_LABEL = '70%';
 
 export default function MLPredictionOutput({
   market,
@@ -52,6 +61,9 @@ export default function MLPredictionOutput({
   horizon,
   priceSourceMode = 'manual',
   currentPrice = null,
+  actionDecision,
+  actionDecisionMessage,
+  actionReasonCodes = [],
 }: Props) {
   const selectedMarket = market ?? bestPredictedMarket ?? null;
   const marketObject =
@@ -87,11 +99,8 @@ export default function MLPredictionOutput({
     value === null ? 'Not available' : `${value.toFixed(2)}%`;
 
   const getHorizonLabel = (value: number | undefined) => {
-    if (value === 1) return 'Next Week';
-    if (value === 2) return '2 Weeks Ahead';
-    if (value === 3) return '3 Weeks Ahead';
-    if (value === 4) return '4 Weeks Ahead';
-    return 'Selected Forecast Period';
+    if (value === 1) return 'Next Market Period';
+    return 'Unsupported Forecast Period';
   };
 
   const getText = (value: unknown) =>
@@ -166,33 +175,23 @@ export default function MLPredictionOutput({
       ? 'Price comparison unavailable.'
       : priceSourceMode === 'system_reference'
       ? predictedPrice > currentPrice
-        ? 'UP — the estimated future price is higher than the system current market price.'
+        ? 'UP — the experimental estimate is higher than the latest recorded market price.'
         : predictedPrice < currentPrice
-        ? 'DOWN — the system current market price is higher than the estimated future price.'
-        : 'STABLE — the system current market price and estimated future price are the same.'
+        ? 'DOWN — the latest recorded market price is higher than the experimental estimate.'
+        : 'STABLE — the latest recorded market price and experimental estimate are the same.'
       : predictedPrice > currentPrice
-      ? 'UP — your estimated future price is higher than your entered price.'
+      ? 'UP — the experimental estimate is higher than your entered price.'
       : predictedPrice < currentPrice
-      ? 'DOWN — your entered price is higher than the estimated future price.'
-      : 'STABLE — your entered price and estimated future price are the same.';
-  const finalDecision =
-    predictedPrice === null || currentPrice === null
-      ? 'Price comparison unavailable'
-      : predictedPrice > currentPrice
-      ? 'Waiting may improve your return'
-      : predictedPrice < currentPrice
-      ? 'Selling now may be safer'
-      : 'The difference is small';
-  const noteText =
-    priceSourceMode === 'system_reference'
-      ? 'This decision uses the system current market price and model market signal.'
-      : 'This decision compares your entered price with the estimated future price.';
-  const showMarketSignals = priceSourceMode === 'system_reference';
+      ? 'DOWN — your entered price is higher than the experimental estimate.'
+      : 'STABLE — your entered price and experimental estimate are the same.';
+  const finalDecision = getActionDecisionLabel(actionDecision);
+  const noteText = actionDecisionMessage;
+  const showMarketSignals = true;
 
   return (
     <div className="rounded-2xl border border-green-100 border-l-4 border-l-green-600 bg-green-50/60 p-5 shadow-sm">
       <p className="text-sm font-medium text-green-800">
-        AI Reasoning Details
+        Experimental Model Details
       </p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -202,14 +201,13 @@ export default function MLPredictionOutput({
             {finalDecision}
           </p>
           <p className="mt-2 text-sm font-medium text-gray-600">
-            {getHorizonLabel(horizon)} | RF Model (~{MODEL_ACCURACY_LABEL}{' '}
-            Accuracy)
+            {getHorizonLabel(horizon)} | Experimental run_001 Random Forest
           </p>
         </section>
 
         <section className="rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
           <p className="text-sm font-semibold text-gray-800">
-            Farmer Price Comparison Signal
+            Experimental Price Comparison
           </p>
           <p className="mt-3 text-sm font-semibold leading-6 text-gray-900">
             {farmerComparisonSignal}
@@ -245,6 +243,12 @@ export default function MLPredictionOutput({
       <p className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium leading-6 text-gray-700 shadow-sm">
         {noteText}
       </p>
+
+      {actionReasonCodes.length > 0 && (
+        <p className="mt-3 text-xs leading-5 text-gray-500">
+          Policy checks: {actionReasonCodes.join(', ')}
+        </p>
+      )}
 
       {showMarketSignals && signalsDiffer && (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-800">

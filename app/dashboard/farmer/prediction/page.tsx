@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import FarmerSidebar from '@/app/navigation/farmer/page';
 import RecommendationForm from './components/RecommendationForm';
 import RecommendationResult from './components/RecommendationResult';
+import { buildPriceRecommendationRequest } from './recommendationContract';
 
 type RecommendationPayload = {
   crop: string;
   district: string;
-  price_rs_kg: number;
+  price_rs_kg?: number;
+  current_price_source: 'manual' | 'system';
   horizon: number;
   harvest_input_mode: 'range' | 'exact';
   quantity_kg: number;
@@ -47,12 +49,7 @@ export default function FarmerPredictionPage() {
     setResult(null);
     setSubmittedInput(payload);
 
-    const requestBody = {
-      crop: payload.crop,
-      district: payload.district,
-      price_rs_kg: payload.price_rs_kg,
-      horizon: payload.horizon,
-    };
+    const requestBody = buildPriceRecommendationRequest(payload);
 
     try {
       const response = await fetch(`${API_BASE}/api/recommend-market`, {

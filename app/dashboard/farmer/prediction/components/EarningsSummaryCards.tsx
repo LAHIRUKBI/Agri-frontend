@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  type ActionDecision,
+  getActionDecisionLabel,
+} from '../recommendationContract';
+
 type HarvestInputMode = 'range' | 'exact';
 
 type Props = {
@@ -16,8 +21,8 @@ type Props = {
   predictedPriceRangeMinRsKg?: number | null;
   predictedPriceRangeMaxRsKg?: number | null;
   currentRevenue: number | null;
-  farmerDecision?: string | null;
-  farmerDecisionMessage?: string | null;
+  actionDecision: ActionDecision;
+  actionDecisionMessage: string;
 };
 
 export default function EarningsSummaryCards({
@@ -34,6 +39,8 @@ export default function EarningsSummaryCards({
   predictedPriceRangeMinRsKg,
   predictedPriceRangeMaxRsKg,
   currentRevenue,
+  actionDecision,
+  actionDecisionMessage,
 }: Props) {
   const quantity =
     harvestInputMode === 'exact' ? exactQuantity : (quantityMin + quantityMax) / 2;
@@ -116,7 +123,10 @@ export default function EarningsSummaryCards({
   const quantityLabel =
     harvestInputMode === 'exact'
       ? `${exactQuantity.toLocaleString()} kg`
-      : quantityRangeLabel || `${quantityMin.toLocaleString()} - ${quantityMax.toLocaleString()} kg`;
+      : `${
+          quantityRangeLabel ||
+          `${quantityMin.toLocaleString()} - ${quantityMax.toLocaleString()} kg`
+        } (approx. ${quantity.toLocaleString()} kg used)`;
   const currentPriceValueLabel =
     price !== null ? formatPricePerKg(price) : currentPriceUnavailableText;
   const sellNowFormula =
@@ -130,30 +140,9 @@ export default function EarningsSummaryCards({
   const futurePriceLabel = formatPriceRangePerKg(predictedPriceMin, predictedPriceMax);
   const futureValueLabel = formatValueRange(futureValueMin, futureValueMax);
   const potentialGainLabel = formatGainRange(potentialGainMin, potentialGainMax);
-  const potentialGainTitle =
-    potentialGainMin !== null &&
-    potentialGainMax !== null &&
-    Math.min(potentialGainMin, potentialGainMax) > 0
-      ? 'Potential Gain'
-      : potentialGainMin !== null &&
-        potentialGainMax !== null &&
-        Math.max(potentialGainMin, potentialGainMax) < 0
-      ? 'Potential Loss'
-      : 'Estimated Difference';
-  const decisionText =
-    predictedPriceRsKg === null || price === null
-      ? 'Price estimate unavailable'
-      : predictedPriceRsKg > price
-      ? 'Waiting may improve your return'
-      : predictedPriceRsKg < price
-      ? 'Selling now may be safer'
-      : 'The difference is small';
-  const potentialGainTone =
-    potentialGainMin !== null && potentialGainMax !== null && Math.max(potentialGainMin, potentialGainMax) > 0
-      ? 'text-green-700'
-      : potentialGainMin !== null && potentialGainMax !== null && Math.min(potentialGainMin, potentialGainMax) < 0
-      ? 'text-red-700'
-      : 'text-gray-700';
+  const potentialGainTitle = 'Model-Implied Value Difference';
+  const decisionText = getActionDecisionLabel(actionDecision);
+  const potentialGainTone = 'text-amber-800';
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
@@ -162,11 +151,11 @@ export default function EarningsSummaryCards({
           <div>
             <p className="text-sm font-medium text-green-700">{cropName}</p>
             <h3 className="text-xl font-bold text-gray-900 md:text-2xl">
-              AI Price Estimate
+              Experimental Model Estimate
             </h3>
           </div>
           <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-sm">
-            Model-based estimate
+            Not action-authorized
           </p>
         </div>
 
@@ -178,11 +167,14 @@ export default function EarningsSummaryCards({
             <p className="mt-2 text-2xl font-bold text-gray-900">
               {currentPriceValueLabel}
             </p>
+            <p className="mt-2 text-xs leading-5 text-gray-500">
+              Production baseline: persistence keeps this price unchanged for the next market period.
+            </p>
           </div>
 
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-gray-600">
-              Estimated Future Price
+              Experimental Next-Period Price
             </p>
             <p className="mt-2 text-3xl font-bold text-gray-900">
               {futurePriceLabel}
@@ -200,6 +192,9 @@ export default function EarningsSummaryCards({
             <p className="text-sm font-medium text-gray-600">Decision</p>
             <p className={`mt-2 text-xl font-bold ${potentialGainTone}`}>
               {decisionText}
+            </p>
+            <p className="mt-2 text-sm leading-5 text-gray-600">
+              {actionDecisionMessage}
             </p>
           </div>
         </div>
@@ -253,6 +248,9 @@ export default function EarningsSummaryCards({
             </p>
             <p className={`mt-2 text-2xl font-bold ${potentialGainTone}`}>
               {potentialGainLabel}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-gray-500">
+              Experimental model calculation only; this is not a guaranteed gain or loss.
             </p>
           </div>
         </div>

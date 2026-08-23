@@ -7,7 +7,7 @@ type Props = {
   onSubmit: (payload: {
     crop: string;
     district: string;
-    price_rs_kg: number;
+    price_rs_kg?: number;
     current_price_source: 'manual' | 'system';
     horizon: number;
     harvest_input_mode: 'range' | 'exact';
@@ -97,7 +97,7 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
     exact_quantity_kg: '',
   });
 
-  const [horizon, setHorizon] = useState(1);
+  const horizon = 1;
   const [localError, setLocalError] = useState('');
 
   const formatLabel = (value: string) =>
@@ -157,9 +157,6 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
     ) {
       return 'Exact harvest quantity must be greater than 0';
     }
-    if (![1, 2, 3, 4].includes(horizon)) {
-      return 'Invalid prediction horizon';
-    }
     return '';
   };
 
@@ -175,12 +172,15 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
     setLocalError('');
 
     const exactQuantity = Number(form.exact_quantity_kg);
-    const requestPrice = Number(form.price_rs_kg) > 0 ? Number(form.price_rs_kg) : 1;
+    const requestPrice =
+      form.current_price_source === 'manual'
+        ? Number(form.price_rs_kg)
+        : undefined;
 
     onSubmit({
       crop: form.crop,
       district: form.district,
-      price_rs_kg: requestPrice,
+      ...(requestPrice !== undefined ? { price_rs_kg: requestPrice } : {}),
       current_price_source: form.current_price_source,
       horizon,
       harvest_input_mode: form.harvest_input_mode,
@@ -201,14 +201,7 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
     });
   };
 
-  const horizonLabel =
-    horizon === 1
-      ? 'Next week'
-      : horizon === 2
-      ? '2 weeks ahead'
-      : horizon === 3
-      ? '3 weeks ahead'
-      : '4 weeks ahead';
+  const horizonLabel = 'Next market period';
 
   return (
     <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -287,16 +280,9 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
             <label className="mb-2 block text-sm font-semibold text-gray-700">
               Prediction Horizon
             </label>
-            <select
-              value={horizon}
-              onChange={(e) => setHorizon(Number(e.target.value))}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base text-gray-800 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500"
-            >
-              <option value={1}>Next week</option>
-              <option value={2}>2 weeks ahead</option>
-              <option value={3}>3 weeks ahead</option>
-              <option value={4}>4 weeks ahead</option>
-            </select>
+            <div className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-base text-gray-800">
+              Next market period
+            </div>
           </div>
 
           {form.current_price_source === 'manual' && (

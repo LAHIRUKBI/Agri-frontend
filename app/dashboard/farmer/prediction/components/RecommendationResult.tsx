@@ -50,6 +50,13 @@ type MarketLike =
       current_price_rs_kg?: number | string;
       reference_price_rs_kg?: number | string;
       predicted_price_rs_kg?: number | string | null;
+      resolved_current_price_rs_kg?: number | string | null;
+      resolved_current_price_at?: string | null;
+      persistence_next_price_rs_kg?: number | string | null;
+      action_decision?: 'SELL_NOW' | 'WAIT' | 'UNCERTAIN' | null;
+      action_decision_message?: string | null;
+      action_reason_codes?: string[];
+      action_authorized?: boolean;
       price_prediction_source?: string | null;
       price_model_metrics?: Record<string, unknown> | null;
       farmer_outcome_signal?: FarmerOutcomeSignal | null;
@@ -100,6 +107,10 @@ type RecommendationData = {
   farmer_outcome_signal?: FarmerOutcomeSignal | null;
   direction_model_signal?: DirectionModelSignal | null;
   market_context_signal?: MarketContextSignal | null;
+  action_decision?: 'SELL_NOW' | 'WAIT' | 'UNCERTAIN' | null;
+  action_decision_message?: string | null;
+  action_reason_codes?: string[];
+  persistence_next_price_rs_kg?: number | string | null;
   comparison_note?: string | null;
   comparison_strength?: string;
   is_close_call?: boolean;
@@ -211,46 +222,27 @@ export default function RecommendationResult({
     if (!market || typeof market === 'string') return null;
 
     return (
+      toNumber(market.resolved_current_price_rs_kg) ??
       toNumber(market.current_price_rs_kg) ??
       toNumber(market.current_price) ??
       toNumber(market.reference_price_rs_kg)
     );
   };
 
-  const getMarketFarmerOutcomeSignal = (
-    market: MarketLike
-  ): FarmerOutcomeSignal | null => {
-    if (!market || typeof market === 'string') return null;
-    return market.farmer_outcome_signal ?? null;
-  };
-
-  const getLegacyFarmerOutcomeSignal = (
-    market: MarketLike
-  ): FarmerOutcomeSignal | null => {
-    if (!market || typeof market === 'string') return null;
-
-    const legacyDecision = market.farmer_decision?.trim().toUpperCase();
-    const direction =
-      legacyDecision === 'WAIT'
-        ? 'GAIN'
-        : legacyDecision === 'SELL_NOW'
-        ? 'LOSS'
-        : legacyDecision === 'SMALL_DIFFERENCE'
-        ? 'SMALL_DIFFERENCE'
-        : null;
-
-    if (!direction && !market.farmer_decision_message) return null;
-
-    return {
-      direction,
-      message: market.farmer_decision_message ?? null,
-    };
-  };
-
-  const farmerOutcomeSignal =
-    getMarketFarmerOutcomeSignal(selectedMarket) ??
-    recommendation.farmer_outcome_signal ??
-    getLegacyFarmerOutcomeSignal(selectedMarket);
+  const selectedMarketObject =
+    selectedMarket && typeof selectedMarket !== 'string' ? selectedMarket : null;
+  const actionDecision =
+    selectedMarketObject?.action_decision ??
+    recommendation.action_decision ??
+    'UNCERTAIN';
+  const actionDecisionMessage =
+    selectedMarketObject?.action_decision_message ??
+    recommendation.action_decision_message ??
+    'Timing advantage is uncertain. Compare current buyer offers and practical selling costs.';
+  const actionReasonCodes =
+    selectedMarketObject?.action_reason_codes ??
+    recommendation.action_reason_codes ??
+    [];
 
   const rawCurrentPriceSource =
     submittedInput?.current_price_source ??
@@ -275,7 +267,11 @@ export default function RecommendationResult({
       : manualCurrentPrice;
   const currentPriceLabel =
     priceSourceMode === 'system_reference'
-      ? 'System Current Market Price'
+      ? `Latest Recorded Market Price${
+          selectedMarketObject?.resolved_current_price_at
+            ? ` (${selectedMarketObject.resolved_current_price_at})`
+            : ''
+        }`
       : 'Current Price';
   const quantity = Number(
     submittedInput?.quantity_kg ?? input?.quantity_kg ?? 0
@@ -322,7 +318,8 @@ export default function RecommendationResult({
     return `${recommendedMarketName} may offer a better estimated return, but transport cost should be considered.`;
   };
 
-  const recommendationSubtext = `Based on your entered price, expected quantity, and the model price estimate for the selected market.`;
+  const recommendationSubtext =
+    'Persistence is the production baseline. The learned-model estimate is shown separately as experimental information.';
 
   return (
     <div className="mt-6 space-y-6">
@@ -347,11 +344,11 @@ export default function RecommendationResult({
         quantityRangeLabel={quantityRangeLabel}
         price={selectedCurrentPrice}
         currentPriceLabel={currentPriceLabel}
-        currentPriceUnavailableText="System current market price unavailable"
+        currentPriceUnavailableText="Latest recorded market price unavailable"
         predictedPriceRsKg={getMarketPredictedPrice(selectedMarket)}
         currentRevenue={currentRevenue}
-        farmerDecision={farmerOutcomeSignal?.direction ?? null}
-        farmerDecisionMessage={farmerOutcomeSignal?.message ?? null}
+        actionDecision={actionDecision}
+        actionDecisionMessage={actionDecisionMessage}
       />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -381,6 +378,9 @@ export default function RecommendationResult({
               horizon={submittedInput?.horizon ?? input?.horizon}
               priceSourceMode={priceSourceMode}
               currentPrice={selectedCurrentPrice}
+              actionDecision={actionDecision}
+              actionDecisionMessage={actionDecisionMessage}
+              actionReasonCodes={actionReasonCodes}
             />
           </div>
         )}
