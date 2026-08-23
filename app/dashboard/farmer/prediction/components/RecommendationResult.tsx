@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { type AiInsights } from '../recommendationContract';
+import AiInsightsPanel from './AiInsightsPanel';
 import EarningsSummaryCards from './EarningsSummaryCards';
 import MLPredictionOutput from './MLPredictionOutput';
 import TransparencyNote from './TransparencyNote';
@@ -88,15 +90,6 @@ type SubmittedInput = {
   exact_quantity_kg?: number;
   horizon?: number;
 } | null;
-
-type AiInsights = {
-  recommendation: string;
-  prediction_summary: string;
-  price_movement: string;
-  prediction_strength: string;
-  why_this_matters: string;
-  suggested_action: string;
-};
 
 type RecommendationData = {
   recommended_market?: MarketLike;
@@ -350,6 +343,8 @@ export default function RecommendationResult({
         actionDecision={actionDecision}
         actionDecisionMessage={actionDecisionMessage}
       />
+
+      <AiInsightsPanel aiInsights={recommendation.ai_insights} />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <button
