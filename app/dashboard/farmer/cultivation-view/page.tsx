@@ -52,32 +52,32 @@ const DigitalCountdown = ({ targetDate, onExpire }: { targetDate: Date, onExpire
 
   if (timeLeft.isExpired) {
     return (
-      <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg font-bold border border-green-300 text-center animate-pulse">
+      <div className="bg-emerald-50 text-emerald-800 px-5 py-3 rounded-2xl font-bold border border-emerald-200 text-center shadow-sm animate-pulse">
         Time is up for this stage! Please advance to the next step.
       </div>
     );
   }
 
   return (
-    <div className="flex gap-2 text-center font-mono">
-      <div className="bg-gray-800 text-green-400 rounded-md p-2 min-w-[60px] shadow-inner border border-gray-700">
-        <span className="text-xl md:text-2xl font-bold block leading-none">{String(timeLeft.days).padStart(2, '0')}</span>
-        <span className="text-[10px] text-gray-400 uppercase font-sans tracking-wider">Days</span>
+    <div className="flex gap-3 text-center font-mono">
+      <div className="bg-stone-900 text-emerald-400 rounded-2xl p-3 min-w-[70px] shadow-inner border border-stone-700">
+        <span className="text-2xl md:text-3xl font-bold block leading-none">{String(timeLeft.days).padStart(2, '0')}</span>
+        <span className="text-[10px] text-stone-400 uppercase font-sans tracking-wider mt-1 block">Days</span>
       </div>
-      <div className="text-gray-800 text-xl font-bold py-1">:</div>
-      <div className="bg-gray-800 text-white rounded-md p-2 min-w-[60px] shadow-inner border border-gray-700">
-        <span className="text-xl md:text-2xl font-bold block leading-none">{String(timeLeft.hours).padStart(2, '0')}</span>
-        <span className="text-[10px] text-gray-400 uppercase font-sans tracking-wider">Hrs</span>
+      <div className="text-stone-400 text-2xl font-bold py-2 flex items-center">:</div>
+      <div className="bg-stone-900 text-white rounded-2xl p-3 min-w-[70px] shadow-inner border border-stone-700">
+        <span className="text-2xl md:text-3xl font-bold block leading-none">{String(timeLeft.hours).padStart(2, '0')}</span>
+        <span className="text-[10px] text-stone-400 uppercase font-sans tracking-wider mt-1 block">Hrs</span>
       </div>
-      <div className="text-gray-800 text-xl font-bold py-1">:</div>
-      <div className="bg-gray-800 text-white rounded-md p-2 min-w-[60px] shadow-inner border border-gray-700">
-        <span className="text-xl md:text-2xl font-bold block leading-none">{String(timeLeft.minutes).padStart(2, '0')}</span>
-        <span className="text-[10px] text-gray-400 uppercase font-sans tracking-wider">Min</span>
+      <div className="text-stone-400 text-2xl font-bold py-2 flex items-center">:</div>
+      <div className="bg-stone-900 text-white rounded-2xl p-3 min-w-[70px] shadow-inner border border-stone-700">
+        <span className="text-2xl md:text-3xl font-bold block leading-none">{String(timeLeft.minutes).padStart(2, '0')}</span>
+        <span className="text-[10px] text-stone-400 uppercase font-sans tracking-wider mt-1 block">Min</span>
       </div>
-      <div className="text-gray-800 text-xl font-bold py-1">:</div>
-      <div className="bg-gray-800 text-green-400 rounded-md p-2 min-w-[60px] shadow-inner border border-gray-700">
-        <span className="text-xl md:text-2xl font-bold block leading-none">{String(timeLeft.seconds).padStart(2, '0')}</span>
-        <span className="text-[10px] text-gray-400 uppercase font-sans tracking-wider">Sec</span>
+      <div className="text-stone-400 text-2xl font-bold py-2 flex items-center">:</div>
+      <div className="bg-stone-900 text-emerald-400 rounded-2xl p-3 min-w-[70px] shadow-inner border border-stone-700">
+        <span className="text-2xl md:text-3xl font-bold block leading-none">{String(timeLeft.seconds).padStart(2, '0')}</span>
+        <span className="text-[10px] text-stone-400 uppercase font-sans tracking-wider mt-1 block">Sec</span>
       </div>
     </div>
   );
@@ -281,36 +281,42 @@ export default function CultivationViewPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-stone-50">
         <div className="text-center px-4">
-          <div className="w-12 h-12 border-3 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-500 text-sm">Loading your crops...</p>
+          <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4 shadow-sm"></div>
+          <p className="text-stone-500 text-sm font-medium">Loading your crops...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50">
-      <aside className="w-64 bg-white border-r border-gray-200 shrink-0">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-stone-50" style={{ zoom: 1.1 }}>
+      <aside className="w-64 bg-white border-r border-stone-200 shrink-0">
         <FarmerSidebar user={user || { name: 'Farmer', role: 'farmer', id: '' }} />
       </aside>
 
       <main className="flex-1 p-4 md:p-5 lg:p-6 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-7xl mx-auto space-y-6">
+          
           {pageError && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
               {pageError}
             </div>
           )}
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <h1 className="text-xl font-semibold text-gray-800">My Cultivation Journey</h1>
-          </div>
+          {/* Hero Section styled like reference */}
+          <section className="rounded-3xl border border-stone-200 bg-[radial-gradient(circle_at_top_left,_#f7fee7,_#fafaf9_55%)] p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">Track & Manage</p>
+            <h1 className="mt-2 text-3xl font-bold text-stone-900">My Cultivation Journey</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
+              Monitor your active crops, track growth stages with precise countdowns, and follow AI-guided steps for an optimal harvest.
+            </p>
+          </section>
 
           <div>
             {user?.activeCultivations && user.activeCultivations.length > 0 ? (
-              <div className="space-y-4">
+              <div className="grid gap-6">
                 {user.activeCultivations.map((cultivation: any, idx) => {
                   const isExpanded = expandedCropIndex === idx;
                   const isTracking = cultivation.isTracking;
@@ -330,43 +336,45 @@ export default function CultivationViewPage() {
                   return (
                     <div
                       key={cultivation._id || idx}
-                      className={`bg-white rounded-lg p-4 border transition-all ${isExpanded ? 'border-green-400 shadow-md ring-1 ring-green-400 ring-opacity-20' : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      className={`bg-white rounded-3xl p-5 md:p-6 border transition-all shadow-sm ${
+                        isExpanded ? 'border-emerald-300 ring-2 ring-emerald-100 ring-opacity-50 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)]' : 'border-stone-200 hover:border-stone-300'
+                      }`}
                     >
-                      <div className="flex flex-col md:flex-row justify-between md:items-center gap-3">
-                        <div className="flex items-start gap-3">
+                      <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
+                        <div className="flex items-start gap-4">
                           <div>
-                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                              <h3 className="font-semibold text-gray-800">{cultivation.cropName}</h3>
-                              <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">
+                            <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                              <h3 className="text-xl font-bold text-stone-900">{cultivation.cropName}</h3>
+                              <span className="bg-stone-100 text-stone-600 text-xs px-2.5 py-1 rounded-full font-medium">
                                 {cultivation.district}
                               </span>
                               {isTracking && !isCompleted && (
-                                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-bold animate-pulse">
-                                  ● Tracking Active
+                                <span className="bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold animate-pulse shadow-sm flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Tracking Active
                                 </span>
                               )}
                               {isCompleted && (
-                                <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded font-bold flex items-center gap-1">
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                                <span className="bg-amber-100 border border-amber-200 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 shadow-sm">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                                   Cultivation Complete
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-400">
-                              Added: {new Date(cultivation.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            <p className="text-sm text-stone-500">
+                              Added: <span className="font-semibold text-stone-700">{new Date(cultivation.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 pt-2 md:pt-0">
                           <button
                             type="button"
                             onClick={() => handleViewSteps(cultivation.cropName, idx)}
-                            className={`shrink-0 px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isExpanded
-                                ? 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-                                : 'bg-white text-green-600 border-green-200 hover:bg-green-50'
-                              }`}
+                            className={`shrink-0 px-4 py-2 rounded-2xl text-sm font-semibold transition-colors border shadow-sm ${
+                              isExpanded
+                                ? 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'
+                                : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+                            }`}
                           >
                             {isExpanded ? 'Close Steps' : 'View Steps'}
                           </button>
@@ -375,56 +383,60 @@ export default function CultivationViewPage() {
                             type="button"
                             onClick={() => handleDeleteCrop(cultivation._id)}
                             disabled={isDeleting === cultivation._id}
-                            className="shrink-0 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            className="shrink-0 px-4 py-2 rounded-2xl text-sm font-semibold transition-colors border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 shadow-sm"
                           >
-                            {isDeleting === cultivation._id ? 'Deleting...' : 'Delete'}
+                            {isDeleting === cultivation._id ? 'Deleting...' : 'Delete Crop'}
                           </button>
                         </div>
                       </div>
 
                       {/* Expanded Section */}
-                      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+                      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
                         <div className="overflow-hidden">
-                          <div className="pt-4 border-t border-gray-100">
+                          <div className="pt-5 border-t border-stone-200">
 
                             {/* Tracking Controls */}
-                            <div className="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="mb-6 p-5 bg-white rounded-3xl border border-stone-200 shadow-sm">
                               {!isTracking ? (
-                                <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+                                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                                   <div>
-                                    <h4 className="text-sm font-semibold text-gray-800">Ready to plant?</h4>
+                                    <h4 className="text-base font-bold text-stone-900 mb-1">Ready to plant?</h4>
+                                    <p className="text-sm text-stone-500">Start the timer to monitor your crop's growth stages.</p>
                                   </div>
                                   <button
                                     onClick={() => handleStartTracking(cultivation._id)}
                                     disabled={isStarting === cultivation._id}
-                                    className="w-full md:w-auto bg-green-600 text-white font-bold py-2 px-5 rounded-md hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50"
+                                    className="w-full md:w-auto bg-emerald-600 text-white font-bold py-2.5 px-6 rounded-2xl hover:bg-emerald-700 transition-colors shadow-md disabled:opacity-50"
                                   >
-                                    {isStarting === cultivation._id ? 'Starting...' : 'Start Tracking'}
+                                    {isStarting === cultivation._id ? 'Starting...' : 'Start Tracking Now'}
                                   </button>
                                 </div>
                               ) : (
                                 isCompleted ? (
-                                  <div className="text-center py-4">
-                                    <h4 className="text-lg font-bold text-green-800 mb-1">Harvest Time!</h4>
-                                    <p className="text-sm text-gray-600">You have successfully completed all stages for this crop.</p>
+                                  <div className="text-center py-5 bg-[radial-gradient(circle_at_center,_#fefce8,_#fffbeb_100%)] rounded-2xl border border-amber-200">
+                                    <h4 className="text-2xl font-bold text-amber-900 mb-2">🎉 Harvest Time!</h4>
+                                    <p className="text-sm text-amber-700 font-medium">You have successfully completed all stages for this crop.</p>
                                   </div>
                                 ) : (
                                   cropSteps.length > 0 && (
-                                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                                      <div className="flex-1 w-full">
-                                        <h4 className="text-sm font-bold text-gray-800 mb-0.5 flex items-center gap-2">
-                                          Current Stage: <span className="text-green-600">{cropSteps[currentStepIndex].stage}</span>
+                                    <div className="flex flex-col xl:flex-row items-center justify-between gap-6">
+                                      <div className="flex-1 w-full flex flex-col items-center xl:items-start text-center xl:text-left">
+                                        <h4 className="text-sm font-bold text-stone-600 uppercase tracking-wide mb-2">
+                                          Current Stage
                                         </h4>
-                                        <p className="text-xs text-gray-500 mb-3">Time remaining until the next stage:</p>
+                                        <h3 className="text-xl font-bold text-emerald-800 mb-4 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100 inline-block">
+                                          {cropSteps[currentStepIndex].stage}
+                                        </h3>
+                                        <p className="text-xs text-stone-500 mb-3 font-medium uppercase tracking-wider">Time remaining until the next stage</p>
                                         <DigitalCountdown targetDate={targetDate} />
                                       </div>
 
-                                      <div className="w-full md:w-auto border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-6 flex flex-col items-center justify-center shrink-0">
-                                        <p className="text-xs text-gray-500 mb-2 text-center">Finished this step early?</p>
+                                      <div className="w-full xl:w-auto border-t xl:border-t-0 xl:border-l border-stone-200 pt-5 xl:pt-0 xl:pl-8 flex flex-col items-center justify-center shrink-0">
+                                        <p className="text-xs text-stone-500 mb-3 text-center font-medium">Finished this step early?</p>
                                         <button
                                           onClick={() => handleAdvanceStep(cultivation._id)}
                                           disabled={isAdvancing === cultivation._id}
-                                          className="w-full bg-white border-2 border-green-600 text-green-700 font-bold py-2 px-4 rounded-md hover:bg-green-50 transition-colors disabled:opacity-50"
+                                          className="w-full bg-white border-2 border-emerald-600 text-emerald-700 font-bold py-3 px-6 rounded-2xl hover:bg-emerald-50 transition-colors shadow-sm disabled:opacity-50"
                                         >
                                           {isAdvancing === cultivation._id ? 'Updating...' : 'Complete Step Now'}
                                         </button>
@@ -435,62 +447,74 @@ export default function CultivationViewPage() {
                               )}
                             </div>
 
-                            <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">Step by Step Plan</h4>
+                            <h4 className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-5 ml-2">Step by Step Guide</h4>
 
                             {loadingSteps ? (
-                              <div className="flex justify-center items-center py-6 text-gray-400 text-xs">
-                                <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                                Loading steps...
+                              <div className="flex justify-center items-center py-8 text-stone-500 text-sm font-medium">
+                                <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mr-3"></div>
+                                Loading intelligent steps...
                               </div>
                             ) : cropSteps.length > 0 ? (
-                              <div className="space-y-0 pl-4 relative">
-                                <div className="absolute top-2 bottom-2 left-[7px] w-px bg-gray-200"></div>
+                              <div className="space-y-0 pl-6 relative">
+                                {/* Vertical Timeline Line */}
+                                <div className="absolute top-4 bottom-4 left-[15px] w-0.5 bg-stone-200"></div>
 
                                 {cropSteps.map((step, stepIdx) => {
                                   const isActiveStep = isTracking && currentStepIndex === stepIdx;
                                   const isPastStep = (isTracking && currentStepIndex > stepIdx) || isCompleted;
 
                                   return (
-                                    <div key={stepIdx} className="flex gap-4 relative pb-6 last:pb-0">
-                                      <div className="relative z-10 flex flex-col items-center">
-                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${isActiveStep ? 'border-green-600 bg-white ring-4 ring-green-100 scale-110' :
-                                            isPastStep ? 'border-green-600 bg-green-600' : 'border-gray-300 bg-white'
-                                          }`}>
+                                    <div key={stepIdx} className="flex gap-6 relative pb-8 last:pb-0">
+                                      <div className="relative z-10 flex flex-col items-center mt-2">
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                          isActiveStep ? 'border-emerald-600 bg-white ring-4 ring-emerald-100 scale-125' :
+                                          isPastStep ? 'border-emerald-600 bg-emerald-600' : 'border-stone-300 bg-white'
+                                        }`}>
                                           {/* Checkmark icon for completed steps */}
                                           {isPastStep && (
-                                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path>
                                             </svg>
                                           )}
                                         </div>
                                       </div>
 
-                                      <div className={`flex-1 p-3 rounded-lg border transition-all ${isActiveStep ? 'bg-green-50 border-green-200 shadow-sm' :
-                                          isPastStep ? 'bg-white border-green-100 opacity-90' : 'bg-white border-gray-100'
-                                        }`}>
-                                        <div className="flex flex-wrap justify-between items-start gap-1 mb-1.5">
-                                          <h5 className={`text-sm font-semibold flex items-center gap-2 ${isActiveStep ? 'text-green-800' :
-                                              isPastStep ? 'text-green-700 line-through decoration-green-300' : 'text-gray-700'
-                                            }`}>
+                                      <div className={`flex-1 p-5 rounded-3xl border transition-all shadow-sm ${
+                                        isActiveStep ? 'bg-[linear-gradient(180deg,_#ffffff,_#f0fdf4)] border-emerald-200 ring-1 ring-emerald-100' :
+                                        isPastStep ? 'bg-white border-emerald-100 opacity-80' : 'bg-white border-stone-200'
+                                      }`}>
+                                        <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
+                                          <h5 className={`text-base font-bold flex items-center gap-2.5 ${
+                                            isActiveStep ? 'text-emerald-900' :
+                                            isPastStep ? 'text-emerald-700 line-through decoration-emerald-300' : 'text-stone-800'
+                                          }`}>
                                             {step.stage}
-                                            {isPastStep && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full not-line-through font-bold">Done</span>}
+                                            {isPastStep && <span className="text-[10px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full not-line-through font-bold">Done</span>}
                                           </h5>
-                                          <span className={`text-xs px-1.5 py-0.5 rounded border ${isPastStep ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-100 text-gray-500 border-gray-200'
-                                            }`}>
-                                            {step.estimatedDays} days
+                                          <span className={`text-xs px-2.5 py-1 rounded-full border font-semibold ${
+                                            isPastStep ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
+                                            isActiveStep ? 'bg-white text-emerald-700 border-emerald-200 shadow-sm' :
+                                            'bg-stone-100 text-stone-600 border-stone-200'
+                                          }`}>
+                                            {step.estimatedDays} Days
                                           </span>
                                         </div>
-                                        <p className={`text-xs leading-relaxed ${isActiveStep ? 'text-green-900/80' :
-                                            isPastStep ? 'text-gray-400' : 'text-gray-500'
-                                          }`}>
+                                        <p className={`text-sm leading-relaxed ${
+                                          isActiveStep ? 'text-emerald-900/80 font-medium' :
+                                          isPastStep ? 'text-stone-400' : 'text-stone-600'
+                                        }`}>
                                           {step.instructions}
                                         </p>
 
                                         {/* Hide alerts on completed steps to keep the UI clean */}
                                         {step.alert && !isPastStep && (
-                                          <div className={`mt-2 text-xs p-2 rounded border ${isActiveStep ? 'bg-red-50 text-red-800 border-red-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                                            <strong className="block mb-0.5 text-xxs uppercase tracking-wider">Alert</strong>
-                                            <p>{step.alert}</p>
+                                          <div className={`mt-4 text-xs p-3 rounded-2xl border ${
+                                            isActiveStep ? 'bg-red-50 text-red-800 border-red-200 shadow-sm' : 'bg-stone-50 text-stone-600 border-stone-200'
+                                          }`}>
+                                            <strong className="flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-widest">
+                                              <span className="text-red-500">⚠️</span> Alert
+                                            </strong>
+                                            <p className="leading-relaxed">{step.alert}</p>
                                           </div>
                                         )}
                                       </div>
@@ -499,7 +523,7 @@ export default function CultivationViewPage() {
                                 })}
                               </div>
                             ) : (
-                              <div className="text-center py-4 bg-gray-50 rounded border border-gray-200 text-gray-400 text-xs">
+                              <div className="text-center py-8 bg-stone-50 rounded-3xl border border-dashed border-stone-300 text-stone-500 text-sm font-medium">
                                 <p>No detailed steps found for {cultivation.cropName}.</p>
                               </div>
                             )}
@@ -512,14 +536,15 @@ export default function CultivationViewPage() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-12 px-4 bg-white rounded-lg border border-dashed border-gray-300 mt-4">
-                <h2 className="text-base font-medium text-gray-700 mb-1">No Active Crops</h2>
-                <p className="text-xs text-gray-400 max-w-sm mx-auto mb-4">
-                  Get AI recommendations and start tracking your first crop.
+              <div className="text-center py-16 px-6 bg-white rounded-3xl border border-dashed border-stone-300 mt-6 shadow-sm">
+                <div className="bg-stone-100 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">🌱</div>
+                <h2 className="text-lg font-bold text-stone-900 mb-2">No Active Crops</h2>
+                <p className="text-sm text-stone-500 max-w-sm mx-auto mb-6">
+                  Get AI recommendations, plant a crop, and start tracking your cultivation journey.
                 </p>
                 <button
                   onClick={() => router.push('/navigation/farmer/cultivation')}
-                  className="bg-green-600 text-white text-xs font-medium px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                  className="bg-emerald-600 text-white text-sm font-bold px-6 py-3 rounded-2xl hover:bg-emerald-700 transition-colors shadow-md"
                 >
                   Find Crops to Plant
                 </button>
