@@ -247,10 +247,14 @@ export default function RotationPlanPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-stone-50">
+    <div className="flex min-h-screen bg-stone-50" style={{ zoom: 1.1 }}>
       <FarmerSidebar user={user} />
+      {/* 
+        වෙනස: මෙහි max-w-5xl යන්න ඉවත් කර max-w-7xl ලෙස විශාල කර ඇත.
+        මෙමගින් අන්තර්ගතය තිරයේ පුළුල්ව විහිදේ.
+      */}
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
-        <div className="mx-auto max-w-5xl space-y-6">
+        <div className="mx-auto max-w-7xl space-y-6">
 
           {/* Hero Section styled like reference */}
           <section className="rounded-3xl border border-stone-200 bg-[radial-gradient(circle_at_top_left,_#f7fee7,_#fafaf9_55%)] p-6 shadow-sm">
@@ -295,13 +299,16 @@ export default function RotationPlanPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* 
+            වෙනස: Form එක සහ දත්ත ඇතුලත් කිරීමේ කොටස් තිරයේ පළල අනුව විහිදෙන ලෙස සකසා ඇත
+          */}
+          <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[1fr,1.5fr]">
             
             {/* 1. Target Crop Section */}
-            <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
+            <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm h-fit">
               <h2 className="text-lg font-semibold text-stone-900 mb-5">1. Target Crop Validation</h2>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="flex-1 w-full">
+              <div className="flex flex-col gap-4">
+                <div className="w-full">
                   <label className="mb-1.5 block text-sm font-medium text-stone-700">Crop to plant:</label>
                   <input
                     type="text" required placeholder="e.g., Tomato, Carrot"
@@ -309,12 +316,12 @@ export default function RotationPlanPage() {
                     value={targetCrop} onChange={(e) => setTargetCrop(e.target.value)}
                   />
                 </div>
-                <div className="w-full sm:w-auto">
+                <div className="w-full">
                   <label className="mb-1.5 block text-sm font-medium text-stone-700">Land Size:</label>
                   <div className="flex items-center gap-3">
                     <select
                       value={targetLandSize} onChange={(e) => setTargetLandSize(Number(e.target.value))}
-                      className="rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                      className="flex-1 rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                     >
                       {LAND_SIZES.map(size => <option key={size.value} value={size.value}>{size.label}</option>)}
                     </select>
@@ -370,7 +377,7 @@ export default function RotationPlanPage() {
 
                     <div className="mb-5">
                       <label className="mb-1.5 block text-xs font-medium text-stone-700">Growing Period</label>
-                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                      <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
                         <select required className="flex-1 rounded-2xl border border-stone-300 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                           value={crop.startMonth} onChange={(e) => handleInputChange(index, 'startMonth', e.target.value)}>
                           <option value="" disabled>Month</option>
@@ -559,8 +566,6 @@ export default function RotationPlanPage() {
                     const isDeficit = status === 'Deficit';
                     const isOptimal = status === 'Optimal';
                     
-                    
-
                     const symbol = item.nutrient.includes('Nitrogen') ? 'N' : item.nutrient.includes('Phosphorus') ? 'P' : 'K';
                     const goodSoilNutrient = initialSoilData?.nutrients?.find((n: any) => n.symbol === symbol);
                     const goodMin = goodSoilNutrient?.min || 0;
@@ -672,22 +677,23 @@ export default function RotationPlanPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-[1.5fr,1fr] gap-6">
+                {/* Fertilizer Impact Map - Now wider */}
                 {evaluation.chemicalBreakdown && evaluation.chemicalBreakdown.length > 0 && (
                   <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
                     <div className="mb-4">
                       <h3 className="text-base font-bold text-stone-900">Fertilizer Impact Map</h3>
                       <p className="text-xs text-stone-500 mt-1">Nutrients added per Sq.Ft from historical records</p>
                     </div>
-                    <div className="grid gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {evaluation.chemicalBreakdown.map((chem, idx) => (
                         <div key={idx} className="rounded-3xl border border-stone-200 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)] p-4 shadow-sm flex items-center gap-4">
                           <div className="bg-emerald-100 text-emerald-700 text-xl h-12 w-12 flex items-center justify-center rounded-2xl shrink-0 shadow-inner">
                             🧪
                           </div>
-                          <div className="flex-1 w-full">
+                          <div className="flex-1 w-full min-w-0">
                             <div className="flex justify-between items-center mb-2">
-                              <h4 className="text-sm font-bold text-stone-900 truncate pr-2">{chem.name}</h4>
+                              <h4 className="text-sm font-bold text-stone-900 truncate pr-2" title={chem.name}>{chem.name}</h4>
                               <span className="bg-stone-200 text-stone-800 text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap">{chem.amount_g}g</span>
                             </div>
                             <div className="flex gap-2 w-full">
@@ -711,6 +717,7 @@ export default function RotationPlanPage() {
                   </div>
                 )}
 
+                {/* Land Area Conversions */}
                 {evaluation.calculatorDetails && evaluation.calculatorDetails.landCalculations && evaluation.calculatorDetails.landCalculations.length > 0 && (
                   <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
                     <div className="mb-4">
