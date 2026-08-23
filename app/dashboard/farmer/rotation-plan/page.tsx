@@ -177,7 +177,6 @@ export default function RotationPlanPage() {
 
     try {
       const token = localStorage.getItem('token');
-      // Payload prepared with past crops matching backend expectation
       const formattedPreviousCrops = pastCrops.map(crop => ({
         ...crop,
         pesticides: crop.pesticides || []
@@ -248,73 +247,78 @@ export default function RotationPlanPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-stone-50">
       <FarmerSidebar user={user} />
-      <main className="flex-1 overflow-y-auto py-6 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto space-y-4">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="mx-auto max-w-5xl space-y-6">
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h1 className="text-xl font-semibold text-green-800">Crop Rotation & Soil Evaluator</h1>
-            <p className="text-xs text-gray-500 mt-1">Analyze historical crop data for nutrient predictions and suitability</p>
-          </div>
+          {/* Hero Section styled like reference */}
+          <section className="rounded-3xl border border-stone-200 bg-[radial-gradient(circle_at_top_left,_#f7fee7,_#fafaf9_55%)] p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">Predict & Analyze</p>
+            <h1 className="mt-2 text-3xl font-bold text-stone-900">Soil Evaluator & Crop Rotation</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
+              Analyze your historical crop data and applied fertilizers to predict current soil nutrient levels and evaluate crop suitability.
+            </p>
+          </section>
 
           {infoMessage && (
-            <div className="bg-amber-50 border border-amber-200 p-3 rounded">
-              <p className="text-xs text-amber-800">{infoMessage}</p>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+              {infoMessage}
             </div>
           )}
 
           {initialSoilData && (
-            <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
-              <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+            <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-xs font-semibold text-blue-900">N-P-K levels in good soil (Limits per Sq.Ft / ppm)</h2>
-                  <p className="text-[10px] text-blue-700">pH: {initialSoilData.phMin} - {initialSoilData.phMax}</p>
+                  <h2 className="text-sm font-semibold text-stone-900">N-P-K levels in good soil (Limits per Sq.Ft / ppm)</h2>
+                  <p className="text-xs text-stone-500 mt-1">pH: {initialSoilData.phMin} - {initialSoilData.phMax}</p>
                 </div>
               </div>
-              <div className="p-3">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                  {initialSoilData.nutrients.map((nut: any, i: number) => (
-                    <div key={i} className="p-2 bg-gray-50 rounded border border-gray-100">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-semibold text-gray-600">{nut.symbol}</span>
-                        <span className={`text-[8px] px-1 py-0.5 rounded ${nut.type === 'main' ? 'bg-green-100 text-green-700' :
-                            nut.type === 'secondary' ? 'bg-blue-100 text-blue-700' :
-                              'bg-gray-100 text-gray-600'
-                          }`}>
-                          {nut.type}
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium text-gray-800 mt-1">{nut.min}-{nut.max} {nut.unit}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {initialSoilData.nutrients.map((nut: any, i: number) => (
+                  <div key={i} className="rounded-2xl bg-stone-50 p-4 border border-stone-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold text-stone-700">{nut.symbol}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                          nut.type === 'main' ? 'bg-emerald-100 text-emerald-700' :
+                          nut.type === 'secondary' ? 'bg-sky-100 text-sky-700' :
+                          'bg-stone-200 text-stone-700'
+                        }`}>
+                        {nut.type}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <p className="text-sm font-bold text-stone-900 mt-2">{nut.min}-{nut.max} <span className="text-[10px] font-normal text-stone-500">{nut.unit}</span></p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="px-4 py-2 bg-green-600">
-                <h2 className="text-xs font-semibold text-white">1. Target Crop</h2>
-              </div>
-              <div className="p-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <label className="text-xs font-medium text-black w-24">Crop to plant:</label>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* 1. Target Crop Section */}
+            <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-stone-900 mb-5">1. Target Crop Validation</h2>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex-1 w-full">
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700">Crop to plant:</label>
                   <input
                     type="text" required placeholder="e.g., Tomato, Carrot"
-                    className="text-black flex-1 text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-green-400 outline-none"
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                     value={targetCrop} onChange={(e) => setTargetCrop(e.target.value)}
                   />
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-medium text-black">Land Size:</label>
+                </div>
+                <div className="w-full sm:w-auto">
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700">Land Size:</label>
+                  <div className="flex items-center gap-3">
                     <select
                       value={targetLandSize} onChange={(e) => setTargetLandSize(Number(e.target.value))}
-                      className="text-black text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-green-400 outline-none"
+                      className="rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                     >
                       {LAND_SIZES.map(size => <option key={size.value} value={size.value}>{size.label}</option>)}
                     </select>
-                    <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded">
+                    <span className="text-xs font-semibold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full whitespace-nowrap">
                       ={(targetLandSize * SQ_FT_PER_ACRE).toLocaleString()} Sq.Ft
                     </span>
                   </div>
@@ -322,60 +326,68 @@ export default function RotationPlanPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="px-4 py-2 bg-green-50 border-b border-gray-200">
-                <h2 className="text-xs font-semibold text-green-800">2. Historical Crop Timeline</h2>
+            {/* 2. Historical Crop Timeline */}
+            <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-semibold text-stone-900">2. Historical Crop Timeline</h2>
+                <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">{pastCrops.length} records</span>
               </div>
-              <div className="p-4 space-y-3">
+              
+              <div className="space-y-4">
                 {pastCrops.map((crop, index) => (
-                  <div key={index} className="relative p-3 border border-gray-100 rounded bg-gray-50">
+                  <div key={index} className="relative rounded-3xl border border-stone-200 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)] p-5 shadow-sm">
                     {pastCrops.length > 1 && (
                       <button type="button" onClick={() => removeCropField(index)}
-                        className="absolute -top-2 -right-2 text-red-500 hover:text-white hover:bg-red-500 text-xs bg-white border border-red-200 w-5 h-5 rounded-full flex items-center justify-center"
-                      >×</button>
+                        className="absolute -top-3 -right-3 h-8 w-8 rounded-full border border-red-200 bg-white text-red-500 shadow-sm flex items-center justify-center transition hover:bg-red-50 hover:text-red-700"
+                        title="Remove record"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
                     )}
 
-                    <div className="flex flex-col sm:flex-row gap-3 mb-3">
-                      <div className="flex-1">
-                        <label className="block text-[10px] font-medium text-black mb-1">Crop Grown</label>
+                    <div className="grid gap-4 md:grid-cols-2 mb-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-stone-700">Crop Grown</label>
                         <input type="text" required placeholder="e.g., Cabbage"
-                          className="text-black w-full text-sm px-3 py-1.5 border border-gray-200 rounded bg-white"
+                          className="w-full rounded-2xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                           value={crop.cropName} onChange={(e) => handleInputChange(index, 'cropName', e.target.value)} />
                       </div>
-                      <div className="w-full sm:w-40">
-                        <label className="block text-[10px] font-medium text-black mb-1">Land Size</label>
-                        <select
-                          className="text-black w-full text-sm px-2 py-1.5 border border-gray-200 rounded bg-white"
-                          value={crop.landSize} onChange={(e) => handleInputChange(index, 'landSize', Number(e.target.value))}
-                        >
-                          {LAND_SIZES.map(size => <option key={size.value} value={size.value}>{size.label}</option>)}
-                        </select>
-                        <span className="block text-[9px] text-gray-500 mt-1 font-bold">
-                          = {(crop.landSize * SQ_FT_PER_ACRE).toLocaleString()} Sq.Ft
-                        </span>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-stone-700">Land Size</label>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="flex-1 rounded-2xl border border-stone-300 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                            value={crop.landSize} onChange={(e) => handleInputChange(index, 'landSize', Number(e.target.value))}
+                          >
+                            {LAND_SIZES.map(size => <option key={size.value} value={size.value}>{size.label}</option>)}
+                          </select>
+                          <span className="text-[10px] text-stone-500 font-semibold bg-stone-200 px-2 py-1 rounded-full whitespace-nowrap">
+                            = {(crop.landSize * SQ_FT_PER_ACRE).toLocaleString()} Sq.Ft
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mb-3">
-                      <label className="block text-[10px] font-medium text-black mb-1">Growing Period</label>
-                      <div className="flex items-center gap-1">
-                        <select required className="text-black flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                    <div className="mb-5">
+                      <label className="mb-1.5 block text-xs font-medium text-stone-700">Growing Period</label>
+                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                        <select required className="flex-1 rounded-2xl border border-stone-300 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                           value={crop.startMonth} onChange={(e) => handleInputChange(index, 'startMonth', e.target.value)}>
                           <option value="" disabled>Month</option>
                           {MONTHS.map(m => <option key={m} value={m}>{m.substring(0, 3)}</option>)}
                         </select>
-                        <select required className="text-black w-16 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                        <select required className="w-24 rounded-2xl border border-stone-300 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                           value={crop.startYear} onChange={(e) => handleInputChange(index, 'startYear', e.target.value)}>
                           <option value="" disabled>Year</option>
                           {YEARS.map(y => <option key={y} value={y}>{y.substring(2)}</option>)}
                         </select>
-                        <span className="text-gray-400 text-xs">to</span>
-                        <select required className="text-black flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                        <span className="text-stone-400 text-sm px-1 font-medium">to</span>
+                        <select required className="flex-1 rounded-2xl border border-stone-300 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                           value={crop.endMonth} onChange={(e) => handleInputChange(index, 'endMonth', e.target.value)}>
                           <option value="" disabled>Month</option>
                           {MONTHS.map(m => <option key={m} value={m}>{m.substring(0, 3)}</option>)}
                         </select>
-                        <select required className="text-black w-16 text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                        <select required className="w-24 rounded-2xl border border-stone-300 px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                           value={crop.endYear} onChange={(e) => handleInputChange(index, 'endYear', e.target.value)}>
                           <option value="" disabled>Year</option>
                           {YEARS.map(y => <option key={y} value={y}>{y.substring(2)}</option>)}
@@ -383,124 +395,137 @@ export default function RotationPlanPage() {
                       </div>
                     </div>
 
-                    <div className="border-t border-gray-200 pt-3 mt-3">
-                      <label className="block text-[10px] font-medium text-black mb-2">Fertilizers Applied (Total Amount)</label>
-                      {crop.fertilizers.map((fert, fIdx) => (
-                        <div key={fIdx} className="flex items-center gap-2 mb-2 md:w-1/2">
-                          <select
-                            className="text-black text-xs px-2 py-1 border rounded w-1/2"
-                            value={fert.name}
-                            onChange={(e) => handleFertilizerChange(index, fIdx, 'name', e.target.value)}
-                          >
-                            {FERTILIZER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
-                          <select className="text-black text-xs px-2 py-1 border rounded w-1/3"
-                            value={fert.amount_g} onChange={(e) => handleFertilizerChange(index, fIdx, 'amount_g', Number(e.target.value))}>
-                            {AMOUNTS.map(amt => <option key={amt.value} value={amt.value}>{amt.label}</option>)}
-                          </select>
-                          <button type="button" onClick={() => handleRemoveFertilizer(index, fIdx)} className="text-red-500 text-xs hover:bg-red-50 p-1 rounded">×</button>
-                        </div>
-                      ))}
-                      <button type="button" onClick={() => handleAddFertilizer(index)} className="text-[10px] text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">+ Add Fertilizer</button>
+                    <div className="border-t border-stone-200 pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-500">Fertilizers Applied</label>
+                        <button type="button" onClick={() => handleAddFertilizer(index)} className="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-full transition">
+                          + Add
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {crop.fertilizers.map((fert, fIdx) => (
+                          <div key={fIdx} className="flex items-center gap-2">
+                            <select
+                              className="flex-1 rounded-xl border border-stone-300 px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                              value={fert.name}
+                              onChange={(e) => handleFertilizerChange(index, fIdx, 'name', e.target.value)}
+                            >
+                              {FERTILIZER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                            <select className="w-28 rounded-xl border border-stone-300 px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                              value={fert.amount_g} onChange={(e) => handleFertilizerChange(index, fIdx, 'amount_g', Number(e.target.value))}>
+                              {AMOUNTS.map(amt => <option key={amt.value} value={amt.value}>{amt.label}</option>)}
+                            </select>
+                            <button type="button" onClick={() => handleRemoveFertilizer(index, fIdx)} className="h-9 w-9 rounded-full border border-red-200 bg-red-50 text-red-500 flex items-center justify-center transition hover:bg-red-100 shrink-0">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                          </div>
+                        ))}
+                        {crop.fertilizers.length === 0 && (
+                          <p className="text-xs text-stone-400 italic">No fertilizers added for this crop period.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
+              </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
-                  <button type="button" onClick={addCropField} className="text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded border border-green-200">
-                    + Add Past Crop
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 border-t border-stone-100 pt-5">
+                <button type="button" onClick={addCropField} className="w-full sm:w-auto rounded-2xl border border-stone-300 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-50">
+                  + Add Another Crop Period
+                </button>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <select value={language} onChange={(e) => setLanguage(e.target.value)} className="rounded-2xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-emerald-500">
+                    <option value="English">English</option>
+                    <option value="Sinhala">සිංහල</option>
+                  </select>
+                  <button type="submit" disabled={loading} className="w-full sm:w-auto rounded-2xl px-6 py-2.5 text-sm font-semibold text-white transition bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+                    {loading ? 'Analyzing...' : 'Run Analysis'}
                   </button>
-                  <div className="flex items-center gap-2">
-                    <select value={language} onChange={(e) => setLanguage(e.target.value)} className="text-xs px-3 py-2 border border-gray-300 rounded bg-white text-black">
-                      <option value="English">English</option>
-                      <option value="Sinhala">සිංහල</option>
-                    </select>
-                    <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:bg-green-300">
-                      {loading ? 'Analyzing...' : 'Run Analysis'}
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
           </form>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 p-3 rounded">
-              <p className="text-xs text-red-700">{error}</p>
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+              {error}
             </div>
           )}
 
           {evaluation && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               
-              <div className={`p-4 rounded-lg border ${evaluation.targetEvaluation.isSuitable ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                <div className="flex items-center justify-between mb-2">
+              {/* Suitability Banner */}
+              <div className={`p-6 rounded-3xl border shadow-sm ${evaluation.targetEvaluation.isSuitable ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-800">Target Crop Suitability (Per Sq.Ft Evaluation)</h3>
-                    <p className="text-[10px] mt-1 font-medium text-gray-600">
+                    <h3 className="text-lg font-bold text-stone-900">Target Crop Suitability</h3>
+                    <p className="text-sm mt-1 font-medium text-stone-600 flex items-center gap-2">
                       Overall Soil Fertility Level: 
-                      <span className={`ml-1 px-2 py-0.5 rounded text-[10px] ${evaluation.targetEvaluation.isFertile ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${evaluation.targetEvaluation.isFertile ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                         {evaluation.targetEvaluation.isFertile ? 'FERTILE' : 'NEEDS IMPROVEMENT'}
                       </span>
                     </p>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded font-bold ${evaluation.targetEvaluation.isSuitable ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                  <span className={`text-sm px-4 py-2 rounded-2xl font-bold uppercase tracking-wider ${evaluation.targetEvaluation.isSuitable ? 'bg-emerald-600 text-white shadow-sm' : 'bg-red-600 text-white shadow-sm'}`}>
                     {evaluation.targetEvaluation.isSuitable ? 'SUITABLE' : 'NOT RECOMMENDED'}
                   </span>
                 </div>
 
                 {!showAIAssistance ? (
-                  <div className="mt-4 pt-3 border-t border-gray-200/60 flex justify-center">
+                  <div className="mt-5 pt-4 border-t border-stone-200/50 flex justify-center">
                     <button
                       type="button"
                       onClick={handleGetAlternatives}
                       disabled={loadingAlternatives}
-                      className="text-xs font-medium px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded shadow-sm hover:bg-blue-100 flex items-center gap-2 disabled:opacity-50"
+                      className="rounded-2xl border border-emerald-300 bg-white px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 shadow-sm disabled:opacity-60 flex items-center gap-2"
                     >
                       {loadingAlternatives ? (
-                        <>
-                          <span className="animate-spin text-lg">⏳</span> Getting Suitable Crops...
-                        </>
+                        <><span className="animate-spin text-lg">⏳</span> Getting Suitable Crops...</>
                       ) : (
-                        "Ask AI for Suitable Alternative Crops"
+                        "Ask Suitable Alternative Crops"
                       )}
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-3 bg-white p-4 rounded border border-gray-200 shadow-sm transition-all">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-xs font-semibold flex items-center gap-1 text-blue-700">
-                        AI Soil Preparation Guide
-                      </h4>
-                      <button onClick={() => setShowAIAssistance(false)} className="text-[10px] text-gray-500 hover:text-gray-800 font-medium bg-gray-100 px-2 py-1 rounded">
-                        Close AI Data
+                  <div className="mt-5 rounded-3xl border border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f0fdf4_100%)] p-5 md:p-6 shadow-sm transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="text-sm font-bold flex items-center gap-1.5 text-emerald-900 uppercase tracking-wide">
+                          ✨ AI Soil Preparation Guide
+                        </h4>
+                      </div>
+                      <button onClick={() => setShowAIAssistance(false)} className="text-xs font-semibold text-stone-500 hover:text-stone-800 bg-stone-100 px-3 py-1.5 rounded-full transition">
+                        X
                       </button>
                     </div>
                     
-                    <ul className="space-y-2 text-sm text-gray-700">
+                    <ul className="space-y-3 text-sm text-stone-700">
                       {formatAiRemedy(evaluation.targetEvaluation.aiSoilRemedy).map((point, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-green-600 text-base leading-tight">•</span>
+                        <li key={idx} className="flex items-start gap-2.5">
+                          <span className="text-emerald-500 text-lg leading-none mt-0.5">•</span>
                           <span className="leading-relaxed">{point}</span>
                         </li>
                       ))}
                     </ul>
 
                     {!evaluation.targetEvaluation.isSuitable && evaluation.alternativeSuggestions && evaluation.alternativeSuggestions.length > 0 && (
-                      <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg shadow-sm mt-4">
-                        <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
-                          Recommended Alternatives for Current Soil
+                      <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50/50 p-5 shadow-sm">
+                        <h3 className="text-sm font-bold text-amber-900 mb-4 uppercase tracking-wide flex items-center gap-2">
+                          🌱 Recommended Alternatives for Current Soil
                         </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {evaluation.alternativeSuggestions.map((alt, idx) => (
-                            <div key={idx} className="bg-white p-3 rounded border border-orange-100 shadow-sm">
-                              <h4 className="text-xs font-bold text-gray-800 mb-2 bg-orange-100 inline-block px-2 py-1 rounded">
+                            <div key={idx} className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
+                              <h4 className="text-sm font-bold text-stone-900 mb-3 bg-amber-100 inline-block px-3 py-1 rounded-full">
                                 {alt.cropName}
                               </h4>
-                              <ul className="space-y-1">
+                              <ul className="space-y-2">
                                 {alt.reasons.map((reason, rIdx) => (
-                                  <li key={rIdx} className="text-[11px] text-gray-700 flex items-start gap-1.5">
-                                    <span className="text-green-500 mt-0.5">-</span>
+                                  <li key={rIdx} className="text-xs text-stone-600 flex items-start gap-2">
+                                    <span className="text-amber-500 font-bold mt-0.5">›</span>
                                     <span className="leading-relaxed">{reason}</span>
                                   </li>
                                 ))}
@@ -515,15 +540,15 @@ export default function RotationPlanPage() {
               </div>
 
               {/* Main Visual Indicator: Current Soil vs Target Requirements */}
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
-                  <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Current Soil Level vs Target Requirements</h3>
-                  <span className="text-[9px] text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200 font-medium">
-                    💡 <span className="font-bold">Current</span> = Predicted by Crop Timeline
+              <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-stone-100 pb-4">
+                  <h3 className="text-base font-bold text-stone-900">Current Soil Level vs Target Requirements</h3>
+                  <span className="text-xs text-stone-600 bg-stone-100 px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5">
+                    💡 <span><strong className="text-stone-900">Current</strong> = Predicted by Timeline</span>
                   </span>
                 </div>
                 
-                <div className="flex flex-col gap-3">
+                <div className="grid gap-5 xl:grid-cols-3">
                   {evaluation.soilNutrientLevels.map((item, idx) => {
                     const currentVal = parseFloat(item.level) || 0;
                     const minVal = item.targetMin || 0;
@@ -534,9 +559,8 @@ export default function RotationPlanPage() {
                     const isDeficit = status === 'Deficit';
                     const isOptimal = status === 'Optimal';
                     
-                    const icon = item.nutrient.includes('Nitrogen') ? '☁️' : item.nutrient.includes('Phosphorus') ? '🪨' : '🍌';
+                    
 
-                    // Good Soil Limits Fetching
                     const symbol = item.nutrient.includes('Nitrogen') ? 'N' : item.nutrient.includes('Phosphorus') ? 'P' : 'K';
                     const goodSoilNutrient = initialSoilData?.nutrients?.find((n: any) => n.symbol === symbol);
                     const goodMin = goodSoilNutrient?.min || 0;
@@ -552,90 +576,90 @@ export default function RotationPlanPage() {
                     const isWithinGood = currentVal >= goodMin && currentVal <= goodMax;
 
                     return (
-                      <div key={idx} className={`border p-3 rounded-lg flex flex-col gap-2 shadow-sm ${
-                        isOptimal ? 'bg-green-50 border-green-200' : 
-                        isDeficit ? 'bg-red-50 border-red-200' : 
-                        'bg-yellow-50 border-yellow-200'
+                      <div key={idx} className={`rounded-3xl border p-5 shadow-sm transition ${
+                        isOptimal ? 'bg-[linear-gradient(180deg,_#ffffff,_#f0fdf4)] border-emerald-200' : 
+                        isDeficit ? 'bg-[linear-gradient(180deg,_#ffffff,_#fef2f2)] border-red-200' : 
+                        'bg-[linear-gradient(180deg,_#ffffff,_#fffbeb)] border-amber-200'
                       }`}>
                         
-                        <div className="flex justify-between items-center mb-1">
-                          <h4 className="text-[11px] font-bold text-gray-800 uppercase flex items-center gap-1.5">
-                            <span className="text-sm">{icon}</span> {item.nutrient}
+                        <div className="flex justify-between items-start mb-4">
+                          <h4 className="text-sm font-bold text-stone-900 uppercase flex items-center gap-2 tracking-wide">
+                            {item.nutrient.split(' ')[0]}
                           </h4>
-                          <span className={`text-[9px] px-2 py-0.5 rounded font-bold border ${
-                            isOptimal ? 'bg-green-200 text-green-800 border-green-300' :
-                            isDeficit ? 'bg-red-200 text-red-800 border-red-300' :
-                            'bg-yellow-200 text-yellow-800 border-yellow-300'
+                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                            isOptimal ? 'bg-emerald-100 text-emerald-800' :
+                            isDeficit ? 'bg-red-100 text-red-800' :
+                            'bg-amber-100 text-amber-800'
                           }`}>
-                            {isOptimal ? '✅ TARGET OPTIMAL' : isDeficit ? `⚠️ TARGET DEFICIT` : `⚠️ TARGET SURPLUS`}
+                            {isOptimal ? '✅ Target Optimal' : isDeficit ? `⚠️ Target Deficit` : `⚠️ Target Surplus`}
                           </span>
                         </div>
                         
-                        <div className="flex flex-col gap-1.5 mt-2">
+                        <div className="flex flex-col gap-3">
                           <div className="flex items-center gap-3">
-                            <span className="text-[9px] w-24 text-gray-700 font-bold uppercase tracking-wider">Current</span>
-                            <div className="flex-1 bg-white border border-gray-300 rounded-full h-2.5 overflow-hidden shadow-inner">
+                            <span className="text-xs w-20 text-stone-700 font-bold uppercase tracking-wider">Current</span>
+                            <div className="flex-1 bg-stone-100 rounded-full h-3 overflow-hidden shadow-inner">
                               <div className={`h-full rounded-full transition-all duration-1000 ${
-                                isOptimal ? 'bg-green-500' : isDeficit ? 'bg-red-500' : 'bg-yellow-500'
+                                isOptimal ? 'bg-emerald-500' : isDeficit ? 'bg-red-500' : 'bg-amber-500'
                               }`} style={{ width: `${currentPct}%` }}></div>
                             </div>
-                            <span className="text-[10px] font-extrabold text-gray-900 w-12 text-right">{currentVal.toFixed(1)}</span>
+                            <span className="text-sm font-extrabold text-stone-900 w-12 text-right">{currentVal.toFixed(1)}</span>
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <span className="text-[9px] w-24 text-gray-500 font-bold uppercase tracking-wider">{targetCrop} Target Min</span>
-                            <div className="flex-1 bg-white border border-gray-200 rounded-full h-1.5 overflow-hidden opacity-70">
-                              <div className="h-full rounded-full bg-blue-400 transition-all duration-1000" style={{ width: `${minPct}%` }}></div>
+                            <span className="text-[10px] w-20 text-stone-500 font-semibold uppercase">Target Min</span>
+                            <div className="flex-1 bg-stone-100 rounded-full h-1.5 overflow-hidden">
+                              <div className="h-full rounded-full bg-stone-400 transition-all duration-1000" style={{ width: `${minPct}%` }}></div>
                             </div>
-                            <span className="text-[9px] font-bold text-gray-600 w-12 text-right">{minVal.toFixed(1)}</span>
+                            <span className="text-xs font-bold text-stone-600 w-12 text-right">{minVal.toFixed(1)}</span>
                           </div>
                           
                           {item.targetMax !== 999999 && (
                             <div className="flex items-center gap-3">
-                              <span className="text-[9px] w-24 text-gray-500 font-bold uppercase tracking-wider">{targetCrop} Target Max</span>
-                              <div className="flex-1 bg-white border border-gray-200 rounded-full h-1.5 overflow-hidden opacity-70">
-                                <div className="h-full rounded-full bg-blue-600 transition-all duration-1000" style={{ width: `${maxPct}%` }}></div>
+                              <span className="text-[10px] w-20 text-stone-500 font-semibold uppercase">Target Max</span>
+                              <div className="flex-1 bg-stone-100 rounded-full h-1.5 overflow-hidden">
+                                <div className="h-full rounded-full bg-stone-600 transition-all duration-1000" style={{ width: `${maxPct}%` }}></div>
                               </div>
-                              <span className="text-[9px] font-bold text-gray-600 w-12 text-right">{displayMax}</span>
+                              <span className="text-xs font-bold text-stone-600 w-12 text-right">{displayMax}</span>
                             </div>
                           )}
 
                           {/* Good Soil (Fertile) Indicator & Detailed Status Box */}
                           {goodSoilNutrient && (
-                            <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
-                              <h5 className="text-[10px] font-bold text-gray-700 mb-1.5 uppercase">Good Soil (Fertile) Analysis:</h5>
+                            <div className="mt-4 pt-4 border-t border-stone-200/60">
+                              <h5 className="text-[10px] font-bold text-stone-500 mb-2.5 uppercase tracking-widest">Good Soil Baseline:</h5>
                               <div className="flex items-center gap-3">
-                                <div className="flex-1 relative h-4 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center">
+                                <div className="flex-1 relative h-4 bg-stone-100 rounded-full overflow-hidden flex items-center shadow-inner">
                                   <div 
-                                    className="absolute h-full bg-teal-200 border-x border-teal-500 opacity-60" 
+                                    className="absolute h-full bg-emerald-200/50" 
                                     style={{ 
                                       left: `${(goodMin / maxGraph) * 100}%`, 
                                       width: `${((goodMax - goodMin) / maxGraph) * 100}%` 
                                     }}
                                   ></div>
                                   <div 
-                                    className="absolute h-full w-2 bg-gray-800 rounded shadow-md z-10" 
-                                    style={{ left: `calc(${(currentVal / maxGraph) * 100}% - 4px)` }}
+                                    className="absolute h-full w-2.5 bg-stone-800 rounded shadow-md z-10 border border-white" 
+                                    style={{ left: `calc(${(currentVal / maxGraph) * 100}% - 5px)` }}
                                   ></div>
                                 </div>
                                 <div className="w-16 text-right">
-                                  <span className="text-[10px] font-bold text-teal-800">{goodMin}-{goodMax}</span>
+                                  <span className="text-xs font-bold text-emerald-800">{goodMin}-{goodMax}</span>
                                 </div>
                               </div>
                               
-                              <div className="mt-2 space-y-1">
-                                <div className="flex justify-between items-center bg-white p-1.5 rounded border border-gray-100">
-                                  <span className="text-[10px] text-gray-600 font-medium">Status vs Fertile Limits:</span>
-                                  {isBelowGood && <span className="text-[9px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">BELOW MINIMUM (Short by {(goodMin - currentVal).toFixed(1)})</span>}
-                                  {isWithinGood && <span className="text-[9px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">WITHIN FERTILE RANGE</span>}
-                                  {isAboveGood && <span className="text-[9px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded">EXCEEDS MAXIMUM (Over by {(currentVal - goodMax).toFixed(1)})</span>}
+                              <div className="mt-4 space-y-2">
+                                <div className="flex justify-between items-center bg-white p-2.5 rounded-2xl border border-stone-100 shadow-sm">
+                                  <span className="text-xs text-stone-600 font-medium">Vs Fertile Limit:</span>
+                                  {isBelowGood && <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 px-2.5 py-1 rounded-full">SHORT BY {(goodMin - currentVal).toFixed(1)}</span>}
+                                  {isWithinGood && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">WITHIN RANGE</span>}
+                                  {isAboveGood && <span className="text-[10px] font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-full">OVER BY {(currentVal - goodMax).toFixed(1)}</span>}
                                 </div>
                                 
-                                <div className="flex justify-between items-center bg-white p-1.5 rounded border border-gray-100">
-                                  <span className="text-[10px] text-gray-600 font-medium">Status vs Target Crop ({targetCrop}):</span>
-                                  {isDeficit && <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">CROP DEFICIT (Needs {(minVal - currentVal).toFixed(1)} more)</span>}
-                                  {isOptimal && <span className="text-[9px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">OPTIMAL FOR CROP</span>}
-                                  {status === 'Surplus' && <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded">CROP SURPLUS (Over by {(currentVal - maxVal).toFixed(1)})</span>}
+                                <div className="flex justify-between items-center bg-white p-2.5 rounded-2xl border border-stone-100 shadow-sm">
+                                  <span className="text-xs text-stone-600 font-medium">Vs Crop Target:</span>
+                                  {isDeficit && <span className="text-[10px] font-bold text-orange-700 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-full">NEEDS {(minVal - currentVal).toFixed(1)} MORE</span>}
+                                  {isOptimal && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">OPTIMAL</span>}
+                                  {status === 'Surplus' && <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-full">OVER BY {(currentVal - maxVal).toFixed(1)}</span>}
                                 </div>
                               </div>
                             </div>
@@ -648,38 +672,36 @@ export default function RotationPlanPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {evaluation.chemicalBreakdown && evaluation.chemicalBreakdown.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="p-3 bg-green-50 border-b border-green-100 flex justify-between items-center">
-                      <div>
-                        <h3 className="text-xs font-medium text-green-800">Fertilizer Distribution Calculation</h3>
-                        <p className="text-[9px] text-green-700 mt-0.5">Visual representation of nutrients added per Sq.Ft</p>
-                      </div>
+                  <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
+                    <div className="mb-4">
+                      <h3 className="text-base font-bold text-stone-900">Fertilizer Impact Map</h3>
+                      <p className="text-xs text-stone-500 mt-1">Nutrients added per Sq.Ft from historical records</p>
                     </div>
-                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50/50">
+                    <div className="grid gap-3">
                       {evaluation.chemicalBreakdown.map((chem, idx) => (
-                        <div key={idx} className="bg-white border border-green-100 rounded-lg p-3 shadow-sm flex items-center gap-3">
-                          <div className="bg-green-100 text-xl h-10 w-10 flex items-center justify-center rounded-full shrink-0">
+                        <div key={idx} className="rounded-3xl border border-stone-200 bg-[linear-gradient(180deg,_#fafaf9,_#ffffff)] p-4 shadow-sm flex items-center gap-4">
+                          <div className="bg-emerald-100 text-emerald-700 text-xl h-12 w-12 flex items-center justify-center rounded-2xl shrink-0 shadow-inner">
                             🧪
                           </div>
                           <div className="flex-1 w-full">
-                            <div className="flex justify-between items-start mb-1.5">
-                              <h4 className="text-[11px] font-bold text-gray-800">{chem.name}</h4>
-                              <span className="bg-gray-100 text-gray-600 text-[9px] px-1.5 py-0.5 rounded font-bold border border-gray-200">{chem.amount_g}g</span>
+                            <div className="flex justify-between items-center mb-2">
+                              <h4 className="text-sm font-bold text-stone-900 truncate pr-2">{chem.name}</h4>
+                              <span className="bg-stone-200 text-stone-800 text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap">{chem.amount_g}g</span>
                             </div>
-                            <div className="flex gap-1.5 w-full">
-                              <div className="bg-blue-50 border border-blue-100 rounded px-1 flex-1 text-center py-1">
-                                <span className="block text-[8px] text-blue-500 font-semibold mb-0.5">N Added</span>
-                                <span className="text-[9px] font-bold text-blue-700">+{chem.added.N.toFixed(4)}</span>
+                            <div className="flex gap-2 w-full">
+                              <div className="bg-white border border-stone-200 rounded-xl px-2 py-1.5 flex-1 text-center shadow-sm">
+                                <span className="block text-[9px] text-stone-500 font-bold uppercase tracking-wider mb-0.5">N</span>
+                                <span className="text-xs font-extrabold text-stone-900">+{chem.added.N.toFixed(2)}</span>
                               </div>
-                              <div className="bg-purple-50 border border-purple-100 rounded px-1 flex-1 text-center py-1">
-                                <span className="block text-[8px] text-purple-500 font-semibold mb-0.5">P Added</span>
-                                <span className="text-[9px] font-bold text-purple-700">+{chem.added.P.toFixed(4)}</span>
+                              <div className="bg-white border border-stone-200 rounded-xl px-2 py-1.5 flex-1 text-center shadow-sm">
+                                <span className="block text-[9px] text-stone-500 font-bold uppercase tracking-wider mb-0.5">P</span>
+                                <span className="text-xs font-extrabold text-stone-900">+{chem.added.P.toFixed(2)}</span>
                               </div>
-                              <div className="bg-orange-50 border border-orange-100 rounded px-1 flex-1 text-center py-1">
-                                <span className="block text-[8px] text-orange-500 font-semibold mb-0.5">K Added</span>
-                                <span className="text-[9px] font-bold text-orange-700">+{chem.added.K.toFixed(4)}</span>
+                              <div className="bg-white border border-stone-200 rounded-xl px-2 py-1.5 flex-1 text-center shadow-sm">
+                                <span className="block text-[9px] text-stone-500 font-bold uppercase tracking-wider mb-0.5">K</span>
+                                <span className="text-xs font-extrabold text-stone-900">+{chem.added.K.toFixed(2)}</span>
                               </div>
                             </div>
                           </div>
@@ -690,24 +712,25 @@ export default function RotationPlanPage() {
                 )}
 
                 {evaluation.calculatorDetails && evaluation.calculatorDetails.landCalculations && evaluation.calculatorDetails.landCalculations.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="p-3 bg-blue-50 border-b border-blue-100">
-                      <h3 className="text-xs font-medium text-blue-800">Land Area Conversion Viewer</h3>
+                  <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm">
+                    <div className="mb-4">
+                      <h3 className="text-base font-bold text-stone-900">Land Area Conversions</h3>
+                      <p className="text-xs text-stone-500 mt-1">1 Acre = 43,560 Sq.Ft</p>
                     </div>
-                    <div className="p-3 space-y-3">
-                      <div>
-                        <h4 className="text-[10px] font-bold text-gray-700 mb-2">Acre to Square Feet (1 Acre = 43,560 Sq.Ft)</h4>
-                        {evaluation.calculatorDetails.landCalculations.map((lc, idx) => (
-                          <div key={idx} className="text-[11px] text-gray-600 flex justify-between border-b border-dashed border-gray-200 pb-1 mb-1 last:border-0">
-                            <span>{lc.cropName} Field Area:</span>
-                            <span className="font-bold text-gray-800">{lc.acres} Acres = {lc.sqFt.toLocaleString()} Sq.Ft</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="space-y-3">
+                      {evaluation.calculatorDetails.landCalculations.map((lc, idx) => (
+                        <div key={idx} className="rounded-2xl border border-stone-100 bg-stone-50 p-4 flex justify-between items-center">
+                          <span className="text-sm text-stone-700 font-medium">{lc.cropName} Field:</span>
+                          <span className="text-sm font-bold text-stone-900 bg-white px-3 py-1.5 rounded-xl border border-stone-200 shadow-sm">
+                            {lc.acres} Ac = {lc.sqFt.toLocaleString()} Sq.Ft
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
+
             </div>
           )}
         </div>
