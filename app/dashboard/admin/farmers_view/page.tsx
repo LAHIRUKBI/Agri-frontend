@@ -42,6 +42,8 @@ export default function FarmersViewPage() {
                 }
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
                 throw new Error(response.status === 401 || response.status === 403
                     ? 'You are not authorized to load farmers. Please sign in as an admin.'
