@@ -262,6 +262,7 @@ const uiText = {
     changePhoto: 'Change photo',
     photoReady: 'Photo ready for analysis',
     soilPhotoHint: 'Use a close-up soil photo with natural light and minimal leaves or stones.',
+    soilTypesCoverage: 'Quick image check now maps the photo to one of 4 selected Sri Lankan soil groups.',
     requestNote: 'Farmer note for the field officer',
     optionalNote: 'Optional note',
     notePlaceholder: 'Mention field access notes, visible issues, or what you want checked.',
@@ -389,6 +390,7 @@ const uiText = {
     changePhoto: 'ඡායාරූපය වෙනස් කරන්න',
     photoReady: 'ඡායාරූපය analysis සඳහා සූදානම්',
     soilPhotoHint: 'ස්වභාවික ආලෝකයේ, කොළ හෝ ගල් අඩුවෙන් පෙනෙන පසේ close-up photo එකක් භාවිතා කරන්න.',
+    soilTypesCoverage: 'ඉක්මන් image check එක දැන් තෝරාගත් ශ්‍රී ලංකා පස් වර්ග 4න් එකකට photo එක map කරයි.',
     requestNote: 'ක්ෂේත්‍ර නිලධාරියාට සටහන',
     optionalNote: 'විකල්ප සටහන',
     notePlaceholder: 'ඉඩමට ඇතුල්වන ආකාරය, පෙනෙන ගැටලු, හෝ පරීක්ෂා කළ යුතු දේ සඳහන් කරන්න.',
@@ -1738,6 +1740,7 @@ export default function SoilHealthPage() {
                             <p className="text-sm font-semibold text-stone-900">{t.soilPhotoTitle}</p>
                             <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">{t.soilPhotoDescription}</p>
                             <p className="mt-2 text-xs text-stone-500">{t.soilPhotoHint}</p>
+                            <p className="mt-1 text-xs font-medium text-emerald-700">{t.soilTypesCoverage}</p>
                           </div>
                         </div>
                         <div className="flex flex-col items-start gap-2 md:items-end">
