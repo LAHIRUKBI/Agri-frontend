@@ -14,6 +14,7 @@ interface ImageMetrics {
   greenMean: number;
   blueMean: number;
   earthyRatio: number;
+  centerEarthyRatio: number;
   blueRatio: number;
   greenRatio: number;
   edgeDensity: number;
@@ -246,13 +247,17 @@ const uiText = {
     invalidPhotoTitle: 'Invalid soil photo',
     invalidPhotoMessage:
       'This image does not look like a soil close-up photo. Please upload a clear photo of soil only.',
+    nonSoilPopupTitle: 'This is not soil',
+    nonSoilPopupMessage: 'Please upload a real soil photo only.',
+    undetectedSoilTitle: 'Undetected soil type',
+    undetectedSoilMessage: 'This soil photo does not match the 4 supported soil types in the current model.',
     popupOkay: 'Okay',
     popupCancel: 'Cancel',
     popupConfirm: 'Confirm',
     confirmDeleteTitle: 'Delete item?',
     confirmClearTitle: 'Clear all items?',
     cropType: 'Crop type',
-    cropTypePlaceholder: 'Paddy, maize, banana...',
+    cropTypePlaceholder: 'pumpkin, maize, banana...',
     landSize: 'Land size (acres)',
     preferredVisitDate: 'Preferred visit date',
     soilPhoto: 'Soil photo',
@@ -374,6 +379,10 @@ const uiText = {
     invalidPhotoTitle: 'වලංගු නොවන පස් ඡායාරූපය',
     invalidPhotoMessage:
       'මේ image එක පස් close-up photo එකක් වගේ පේන්නේ නැහැ. කරුණාකර පස පමණක් පේන පැහැදිලි ඡායාරූපයක් upload කරන්න.',
+    nonSoilPopupTitle: 'මේක පස් නෙවෙයි',
+    nonSoilPopupMessage: 'කරුණාකර සත්‍ය පස් ඡායාරූපයක් පමණක් upload කරන්න.',
+    undetectedSoilTitle: 'පස් වර්ගය හඳුනාගත නොහැක',
+    undetectedSoilMessage: 'මේ පස් ඡායාරූපය current model එකේ support කරන පස් වර්ග 4ට ගැළපෙන්නේ නැහැ.',
     popupOkay: 'හරි',
     popupCancel: 'අවලංගු කරන්න',
     popupConfirm: 'තහවුරු කරන්න',
@@ -594,27 +603,51 @@ function isLikelySoilPhoto(imageMetrics: ImageMetrics) {
     greenMean,
     blueMean,
     earthyRatio,
+    centerEarthyRatio,
     blueRatio,
     greenRatio,
     edgeDensity
   } = imageMetrics;
   const channelSpread = Math.max(redMean, greenMean, blueMean) - Math.min(redMean, greenMean, blueMean);
 
-  const hasEarthDominance = earthyRatio >= 0.34;
-  const hasLowBlueScene = blueRatio <= 0.22;
-  const hasLowVegetation = greenRatio <= 0.28;
-  const hasCloseTexture = textureScore >= 24 && edgeDensity >= 0.12;
-  const hasBalancedLight = brightness >= 35 && brightness <= 205;
-  const hasBalancedChannels = channelSpread <= 105 && redMean >= blueMean - 5;
+  const strongSoilSignature =
+    earthyRatio >= 0.26 &&
+    centerEarthyRatio >= 0.3 &&
+    textureScore >= 18 &&
+    edgeDensity >= 0.07 &&
+    redMean >= blueMean - 8;
 
-  return (
-    hasEarthDominance &&
-    hasLowBlueScene &&
-    hasLowVegetation &&
-    hasCloseTexture &&
-    hasBalancedLight &&
+  const hasEarthDominance = earthyRatio >= 0.24;
+  const hasLowBlueScene = blueRatio <= 0.18;
+  const hasLowVegetation = greenRatio <= 0.22;
+  const hasCloseTexture = textureScore >= 18 && edgeDensity >= 0.07;
+  const hasBalancedLight = brightness >= 35 && brightness <= 205;
+  const hasBalancedChannels = channelSpread <= 118 && redMean >= blueMean - 8;
+  const hasSoilCenteredFrame = centerEarthyRatio >= 0.3;
+  const looksLikeWideScene =
+    (
+      (blueRatio > 0.16 && centerEarthyRatio < 0.24) ||
+      (greenRatio > 0.2 && centerEarthyRatio < 0.24) ||
+      centerEarthyRatio < 0.16 ||
+      (textureScore > 55 && blueMean >= redMean && earthyRatio < 0.24)
+    ) && !strongSoilSignature;
+
+  const checks = [
+    hasEarthDominance,
+    hasSoilCenteredFrame,
+    hasLowBlueScene,
+    hasLowVegetation,
+    hasCloseTexture,
+    hasBalancedLight,
     hasBalancedChannels
-  );
+  ];
+  const passedChecks = checks.filter(Boolean).length;
+
+  if (looksLikeWideScene) {
+    return false;
+  }
+
+  return strongSoilSignature || (passedChecks >= 5 && hasEarthDominance && hasCloseTexture && hasSoilCenteredFrame);
 }
 
 function seedRequestDraft(request: SoilRequest): RequestDraft {
@@ -669,6 +702,8 @@ async function extractImageMetrics(file: File): Promise<ImageMetrics> {
   let b = 0;
   let brightness = 0;
   let earthyPixels = 0;
+  let centerEarthyPixels = 0;
+  let centerPixels = 0;
   let bluePixels = 0;
   let greenPixels = 0;
   let edgePixels = 0;
@@ -690,6 +725,7 @@ async function extractImageMetrics(file: File): Promise<ImageMetrics> {
           (saturation <= 0.24 && value >= 0.16 && value <= 0.72));
       const isBlueScene = hue >= 185 && hue <= 260 && saturation >= 0.18 && value >= 0.22;
       const isGreenScene = hue >= 70 && hue <= 170 && saturation >= 0.18 && value >= 0.18;
+      const isCenterRegion = x >= 56 && x < 168 && y >= 56 && y < 168;
 
       r += red;
       g += green;
@@ -699,6 +735,12 @@ async function extractImageMetrics(file: File): Promise<ImageMetrics> {
       brightnessGrid[pixelIndex] = pixelBrightness;
 
       if (isEarthTone) earthyPixels += 1;
+      if (isCenterRegion) {
+        centerPixels += 1;
+        if (isEarthTone) {
+          centerEarthyPixels += 1;
+        }
+      }
       if (isBlueScene) bluePixels += 1;
       if (isGreenScene) greenPixels += 1;
     }
@@ -728,10 +770,47 @@ async function extractImageMetrics(file: File): Promise<ImageMetrics> {
     greenMean: Number((g / totalPixels).toFixed(2)),
     blueMean: Number((b / totalPixels).toFixed(2)),
     earthyRatio: Number((earthyPixels / totalPixels).toFixed(4)),
+    centerEarthyRatio: Number((centerEarthyPixels / Math.max(centerPixels, 1)).toFixed(4)),
     blueRatio: Number((bluePixels / totalPixels).toFixed(4)),
     greenRatio: Number((greenPixels / totalPixels).toFixed(4)),
     edgeDensity: Number((edgePixels / totalPixels).toFixed(4))
   };
+}
+
+async function createResizedImageDataUrl(file: File): Promise<string> {
+  const originalDataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = originalDataUrl;
+  });
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas is not available in this browser.');
+  }
+
+  canvas.width = 640;
+  canvas.height = 640;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 640, 640);
+
+  const scale = Math.min(640 / image.width, 640 / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+  const offsetX = (640 - width) / 2;
+  const offsetY = (640 - height) / 2;
+  ctx.drawImage(image, offsetX, offsetY, width, height);
+
+  return canvas.toDataURL('image/jpeg', 0.78);
 }
 
 export default function SoilHealthPage() {
@@ -739,6 +818,7 @@ export default function SoilHealthPage() {
   const [form, setForm] = useState(initialForm);
   const [mode, setMode] = useState<Mode>('quick');
   const [imageMetrics, setImageMetrics] = useState<ImageMetrics | null>(null);
+  const [imageDataUrl, setImageDataUrl] = useState('');
   const [metricsPreview, setMetricsPreview] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [history, setHistory] = useState<SoilRecord[]>([]);
@@ -886,19 +966,15 @@ export default function SoilHealthPage() {
 
     if (!file) {
       setImageMetrics(null);
+      setImageDataUrl('');
       setMetricsPreview('');
       return;
     }
 
     try {
+      const dataUrl = await createResizedImageDataUrl(file);
       const metrics = await extractImageMetrics(file);
-      if (!isLikelySoilPhoto(metrics)) {
-        setImageMetrics(null);
-        setMetricsPreview('');
-        event.target.value = '';
-        showInfoPopup(t.invalidPhotoTitle, t.invalidPhotoMessage);
-        return;
-      }
+      setImageDataUrl(dataUrl);
       setMetricsPreview(URL.createObjectURL(file));
       setImageMetrics(metrics);
     } catch {
@@ -938,7 +1014,8 @@ export default function SoilHealthPage() {
       landSize: Number(form.landSize),
       preferredDate: form.preferredDate || undefined,
       farmerNotes: form.farmerNotes,
-      imageMetrics
+      imageMetrics,
+      imageBase64: imageDataUrl || undefined
     };
 
     try {
@@ -964,7 +1041,13 @@ export default function SoilHealthPage() {
       await loadData();
     } catch (submitError: unknown) {
       const message = submitError instanceof Error ? submitError.message : t.somethingWentWrong;
+      setLatestResult(null);
       setError(message);
+      if (message.includes('valid close-up soil photo') || message.includes('does not appear to be a valid') || message.includes('This is not soil')) {
+        showInfoPopup(t.nonSoilPopupTitle, t.nonSoilPopupMessage);
+      } else if (message.includes('does not match the 4 supported soil groups') || message.includes('Undetected soil type')) {
+        showInfoPopup(t.undetectedSoilTitle, t.undetectedSoilMessage);
+      }
     } finally {
       setSubmitting(false);
     }
