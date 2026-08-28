@@ -1,50 +1,63 @@
 'use client';
 
-import {
-  type ActionDecision,
-  getActionDecisionLabel,
-} from '../recommendationContract';
-
 type HarvestInputMode = 'range' | 'exact';
 
-type Props = {
-  cropName: string;
+type EarningsQuantityInput = {
   harvestInputMode: HarvestInputMode;
   quantityMin: number;
   quantityMax: number;
   exactQuantity: number;
-  quantityRangeLabel: string;
+};
+
+export const resolveEarningsQuantity = ({
+  harvestInputMode,
+  quantityMin,
+  quantityMax,
+  exactQuantity,
+}: EarningsQuantityInput) =>
+  harvestInputMode === 'exact'
+    ? exactQuantity
+    : (quantityMin + quantityMax) / 2;
+
+export const calculateModelImpliedHarvestValue = (
+  predictedPriceRsKg: number | null | undefined,
+  quantity: number
+) =>
+  predictedPriceRsKg === null || predictedPriceRsKg === undefined
+    ? null
+    : predictedPriceRsKg * quantity;
+
+type Props = {
+  harvestInputMode: HarvestInputMode;
+  quantityMin: number;
+  quantityMax: number;
+  exactQuantity: number;
   price: number | null;
-  currentPriceLabel?: string;
   currentPriceUnavailableText?: string;
   predictedPriceRsKg: number | null;
   predictedPriceRangeMinRsKg?: number | null;
   predictedPriceRangeMaxRsKg?: number | null;
   currentRevenue: number | null;
-  actionDecision: ActionDecision;
-  actionDecisionMessage: string;
 };
 
 export default function EarningsSummaryCards({
-  cropName,
   harvestInputMode,
   quantityMin,
   quantityMax,
   exactQuantity,
-  quantityRangeLabel,
   price,
-  currentPriceLabel = 'Current Price',
   currentPriceUnavailableText = 'Price estimate unavailable',
   predictedPriceRsKg,
   predictedPriceRangeMinRsKg,
   predictedPriceRangeMaxRsKg,
   currentRevenue,
-  actionDecision,
-  actionDecisionMessage,
 }: Props) {
-  const quantity =
-    harvestInputMode === 'exact' ? exactQuantity : (quantityMin + quantityMax) / 2;
-  const hasPredictedPrice = predictedPriceRsKg !== null;
+  const quantity = resolveEarningsQuantity({
+    harvestInputMode,
+    quantityMin,
+    quantityMax,
+    exactQuantity,
+  });
   const hasPredictedPriceRange =
     predictedPriceRangeMinRsKg !== null &&
     predictedPriceRangeMinRsKg !== undefined &&
@@ -65,8 +78,12 @@ export default function EarningsSummaryCards({
 
   const sellNowValue =
     currentRevenue ?? (price !== null ? price * quantity : null);
-  const futureValueMin = hasFuturePrice ? predictedPriceMin * quantity : null;
-  const futureValueMax = hasFuturePrice ? predictedPriceMax * quantity : null;
+  const futureValueMin = hasFuturePrice
+    ? calculateModelImpliedHarvestValue(predictedPriceMin, quantity)
+    : null;
+  const futureValueMax = hasFuturePrice
+    ? calculateModelImpliedHarvestValue(predictedPriceMax, quantity)
+    : null;
   const potentialGainMin =
     futureValueMin !== null && sellNowValue !== null
       ? futureValueMin - sellNowValue
@@ -80,23 +97,15 @@ export default function EarningsSummaryCards({
     `Rs. ${Math.round(Math.abs(value)).toLocaleString()}`;
 
   const formatSignedCurrency = (value: number) => {
-    if (value > 0) return formatCurrency(value);
-    if (value < 0) return `${formatCurrency(value)} loss`;
+    if (value > 0) return `+ ${formatCurrency(value)}`;
+    if (value < 0) return `− ${formatCurrency(value)}`;
     return formatCurrency(value);
-  };
-
-  const formatPricePerKg = (value: number) => `${formatCurrency(value)}/kg`;
-
-  const formatPriceRangePerKg = (min: number | null, max: number | null) => {
-    if (min === null || max === null) return 'Price estimate unavailable';
-    if (Math.round(min) === Math.round(max)) return formatPricePerKg(min);
-    return `${formatCurrency(min)} - ${formatCurrency(max)}/kg`;
   };
 
   const formatValueRange = (min: number | null, max: number | null) => {
     if (min === null || max === null) return 'Price estimate unavailable';
     if (Math.round(min) === Math.round(max)) return formatCurrency(min);
-    return `${formatCurrency(min)} - ${formatCurrency(max)}`;
+    return `${formatCurrency(min)} – ${formatCurrency(max)}`;
   };
 
   const formatGainRange = (min: number | null, max: number | null) => {
@@ -104,157 +113,115 @@ export default function EarningsSummaryCards({
 
     const lower = Math.min(min, max);
     const upper = Math.max(min, max);
-
     if (Math.round(lower) === Math.round(upper)) {
       return formatSignedCurrency(lower);
     }
 
-    if (lower < 0 && upper < 0) {
-      return `${formatCurrency(lower)} - ${formatCurrency(upper)} loss`;
-    }
-
-    if (lower < 0 && upper > 0) {
-      return `${formatCurrency(lower)} loss - ${formatCurrency(upper)} gain`;
-    }
-
-    return `${formatCurrency(lower)} - ${formatCurrency(upper)}`;
+    return `${formatSignedCurrency(lower)} to ${formatSignedCurrency(upper)}`;
   };
 
-  const quantityLabel =
-    harvestInputMode === 'exact'
-      ? `${exactQuantity.toLocaleString()} kg`
-      : `${
-          quantityRangeLabel ||
-          `${quantityMin.toLocaleString()} - ${quantityMax.toLocaleString()} kg`
-        } (approx. ${quantity.toLocaleString()} kg used)`;
-  const currentPriceValueLabel =
-    price !== null ? formatPricePerKg(price) : currentPriceUnavailableText;
-  const sellNowFormula =
-    price !== null
-      ? `${formatPricePerKg(price)} x ${quantity.toLocaleString()} kg`
-      : currentPriceUnavailableText;
-  const futureFormula =
-    hasFuturePrice && hasPredictedPrice
-      ? `${formatPricePerKg(predictedPriceRsKg)} x ${quantity.toLocaleString()} kg`
-      : 'Price estimate unavailable';
-  const futurePriceLabel = formatPriceRangePerKg(predictedPriceMin, predictedPriceMax);
-  const futureValueLabel = formatValueRange(futureValueMin, futureValueMax);
-  const potentialGainLabel = formatGainRange(potentialGainMin, potentialGainMax);
-  const potentialGainTitle = 'Model-Implied Value Difference';
-  const decisionText = getActionDecisionLabel(actionDecision);
-  const potentialGainTone = 'text-amber-800';
+  const experimentalScenarioValue = futureValueMax ?? futureValueMin;
+  const comparisonScale = Math.max(
+    sellNowValue ?? 0,
+    experimentalScenarioValue ?? 0,
+    1
+  );
+  const currentValueBarWidth =
+    sellNowValue === null ? 0 : Math.max(sellNowValue, 0) / comparisonScale * 100;
+  const experimentalValueBarWidth =
+    experimentalScenarioValue === null
+      ? 0
+      : Math.max(experimentalScenarioValue, 0) / comparisonScale * 100;
 
   return (
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-      <section className="rounded-2xl border border-green-100 bg-green-50/60 p-5 shadow-sm md:p-6">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-green-700">{cropName}</p>
-            <h3 className="text-xl font-bold text-gray-900 md:text-2xl">
-              Experimental Model Estimate
-            </h3>
-          </div>
-          <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-sm">
-            Not action-authorized
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-gray-600">
-              {currentPriceLabel}
-            </p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">
-              {currentPriceValueLabel}
-            </p>
-            <p className="mt-2 text-xs leading-5 text-gray-500">
-              Production baseline: persistence keeps this price unchanged for the next market period.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-gray-600">
-              Experimental Next-Period Price
-            </p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">
-              {futurePriceLabel}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-gray-600">Quantity</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">
-              {quantityLabel}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-gray-600">Decision</p>
-            <p className={`mt-2 text-xl font-bold ${potentialGainTone}`}>
-              {decisionText}
-            </p>
-            <p className="mt-2 text-sm leading-5 text-gray-600">
-              {actionDecisionMessage}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-amber-100 bg-amber-50/60 p-5 shadow-sm md:p-6">
-        <h3 className="text-xl font-bold text-gray-900 md:text-2xl">
-          Earnings Comparison
+    <section
+      aria-labelledby="selling-scenario-heading"
+      className="overflow-hidden rounded-[1.35rem] border border-emerald-100 bg-[linear-gradient(145deg,#ffffff_0%,#f4fbf7_100%)] shadow-sm"
+    >
+      <div className="border-b border-emerald-100/80 px-4 py-3">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
+          Your selling scenario
+        </p>
+        <h3 id="selling-scenario-heading" className="sr-only">
+          Current and experimental crop values
         </h3>
+      </div>
 
-        <div className="mt-5 space-y-4">
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Sell Now Value</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {sellNowValue !== null
-                    ? formatCurrency(sellNowValue)
-                    : currentPriceUnavailableText}
-                </p>
-              </div>
-              <p className="text-xs font-medium text-gray-400">
-                Formula: {sellNowFormula}
-              </p>
+      <div className="p-4">
+        <dl className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+          <div className="border-b border-slate-100 pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3 lg:border-b lg:border-r-0 lg:pb-3 lg:pr-0 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-3">
+            <dt className="text-xs font-semibold leading-4 text-slate-500">
+              Sell at Current Price
+            </dt>
+            <dd className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+              {sellNowValue !== null
+                ? formatCurrency(sellNowValue)
+                : currentPriceUnavailableText}
+            </dd>
+          </div>
+          <div className="border-b border-slate-100 pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-3 lg:border-b lg:border-r-0 lg:pb-3 lg:pr-0 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-3">
+            <dt className="text-xs font-semibold leading-4 text-slate-500">
+              Experimental Model-Implied Value
+            </dt>
+            <dd className="mt-1 text-2xl font-black tracking-tight text-teal-800">
+              {formatValueRange(futureValueMin, futureValueMax)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold leading-4 text-slate-500">
+              Model-Implied Difference
+            </dt>
+            <dd className="mt-1 text-2xl font-black tracking-tight text-amber-800">
+              {formatGainRange(potentialGainMin, potentialGainMax)}
+            </dd>
+          </div>
+        </dl>
+
+        <div
+          role="img"
+          aria-label="Visual comparison of current sale value and experimental model-implied value"
+          className="mt-4 space-y-3 rounded-xl bg-slate-950/[0.025] p-3"
+        >
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+              <span className="font-semibold text-slate-600">
+                Current price value
+              </span>
+              <span className="font-bold text-slate-800">
+                {sellNowValue !== null
+                  ? formatCurrency(sellNowValue)
+                  : currentPriceUnavailableText}
+              </span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 motion-reduce:transition-none"
+                style={{ width: `${currentValueBarWidth}%` }}
+              />
             </div>
           </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Estimated Future Value
-                </p>
-                <p
-                  className={`mt-2 font-bold text-gray-900 ${
-                    hasFuturePrice ? 'text-2xl' : 'text-base'
-                  }`}
-                >
-                  {futureValueLabel}
-                </p>
-              </div>
-              <p className="text-xs font-medium text-gray-400">
-                Formula: {futureFormula}
-              </p>
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+              <span className="font-semibold text-slate-600">
+                Experimental scenario
+              </span>
+              <span className="font-bold text-teal-800">
+                {formatValueRange(futureValueMin, futureValueMax)}
+              </span>
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-gray-600">
-              {potentialGainTitle}
-            </p>
-            <p className={`mt-2 text-2xl font-bold ${potentialGainTone}`}>
-              {potentialGainLabel}
-            </p>
-            <p className="mt-2 text-xs leading-5 text-gray-500">
-              Experimental model calculation only; this is not a guaranteed gain or loss.
-            </p>
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-[width] duration-300 motion-reduce:transition-none"
+                style={{ width: `${experimentalValueBarWidth}%` }}
+              />
+            </div>
           </div>
         </div>
-      </section>
-    </div>
+
+        <p className="mt-3 text-xs leading-5 text-slate-600">
+          Experimental estimate — not guaranteed earnings.
+        </p>
+      </div>
+    </section>
   );
 }

@@ -1,7 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CROPS, DISTRICTS } from '@/utils/prediction-options';
+import {
+  CROPS,
+  DISTRICTS,
+  getQuantityRangesForCrop,
+} from '@/utils/prediction-options';
 
 type Props = {
   onSubmit: (payload: {
@@ -18,72 +22,6 @@ type Props = {
     exact_quantity_kg?: number;
   }) => void;
   loading: boolean;
-};
-
-type QuantityRange = {
-  label: string;
-  value: number;
-  min: number;
-  max?: number;
-};
-
-const QUANTITY_RANGES: Record<string, QuantityRange[]> = {
-  beans: [
-    { label: 'Small Harvest (25–75 kg)', value: 50, min: 25, max: 75 },
-    { label: 'Medium Harvest (75–150 kg)', value: 112.5, min: 75, max: 150 },
-    { label: 'Large Harvest (150–300 kg)', value: 225, min: 150, max: 300 },
-    { label: 'Very Large Harvest (300–500 kg)', value: 400, min: 300, max: 500 },
-    { label: 'Bulk Harvest (500+ kg)', value: 600, min: 500 },
-  ],
-  chili: [
-    { label: 'Small Harvest (25–75 kg)', value: 50, min: 25, max: 75 },
-    { label: 'Medium Harvest (75–150 kg)', value: 112.5, min: 75, max: 150 },
-    { label: 'Large Harvest (150–300 kg)', value: 225, min: 150, max: 300 },
-    { label: 'Very Large Harvest (300–500 kg)', value: 400, min: 300, max: 500 },
-    { label: 'Bulk Harvest (500+ kg)', value: 600, min: 500 },
-  ],
-  eggplants: [
-    { label: 'Small Harvest (50–150 kg)', value: 100, min: 50, max: 150 },
-    { label: 'Medium Harvest (150–300 kg)', value: 225, min: 150, max: 300 },
-    { label: 'Large Harvest (300–600 kg)', value: 450, min: 300, max: 600 },
-    { label: 'Very Large Harvest (600–1000 kg)', value: 800, min: 600, max: 1000 },
-    { label: 'Bulk Harvest (1000+ kg)', value: 1200, min: 1000 },
-  ],
-  'snake gourd': [
-    { label: 'Small Harvest (50–150 kg)', value: 100, min: 50, max: 150 },
-    { label: 'Medium Harvest (150–300 kg)', value: 225, min: 150, max: 300 },
-    { label: 'Large Harvest (300–600 kg)', value: 450, min: 300, max: 600 },
-    { label: 'Very Large Harvest (600–1000 kg)', value: 800, min: 600, max: 1000 },
-    { label: 'Bulk Harvest (1000+ kg)', value: 1200, min: 1000 },
-  ],
-  tomatoes: [
-    { label: 'Small Harvest (50–150 kg)', value: 100, min: 50, max: 150 },
-    { label: 'Medium Harvest (150–300 kg)', value: 225, min: 150, max: 300 },
-    { label: 'Large Harvest (300–600 kg)', value: 450, min: 300, max: 600 },
-    { label: 'Very Large Harvest (600–1000 kg)', value: 800, min: 600, max: 1000 },
-    { label: 'Bulk Harvest (1000+ kg)', value: 1200, min: 1000 },
-  ],
-  cabbage: [
-    { label: 'Small Harvest (50–150 kg)', value: 100, min: 50, max: 150 },
-    { label: 'Medium Harvest (150–300 kg)', value: 225, min: 150, max: 300 },
-    { label: 'Large Harvest (300–600 kg)', value: 450, min: 300, max: 600 },
-    { label: 'Very Large Harvest (600–1000 kg)', value: 800, min: 600, max: 1000 },
-    { label: 'Bulk Harvest (1000+ kg)', value: 1200, min: 1000 },
-  ],
-  carrots: [
-    { label: 'Small Harvest (50–150 kg)', value: 100, min: 50, max: 150 },
-    { label: 'Medium Harvest (150–300 kg)', value: 225, min: 150, max: 300 },
-    { label: 'Large Harvest (300–600 kg)', value: 450, min: 300, max: 600 },
-    { label: 'Very Large Harvest (600–1000 kg)', value: 800, min: 600, max: 1000 },
-    { label: 'Bulk Harvest (1000+ kg)', value: 1200, min: 1000 },
-  ],
-  pumpkin: [
-    { label: 'Small Harvest (100–300 kg)', value: 200, min: 100, max: 300 },
-    { label: 'Medium Harvest (300–700 kg)', value: 500, min: 300, max: 700 },
-    { label: 'Large Harvest (700–1200 kg)', value: 950, min: 700, max: 1200 },
-    { label: 'Very Large Harvest (1200–2000 kg)', value: 1600, min: 1200, max: 2000 },
-    { label: 'Bulk Harvest (2000+ kg)', value: 2200, min: 2000 },
-  ],
 };
 
 export default function RecommendationForm({ onSubmit, loading }: Props) {
@@ -107,8 +45,7 @@ export default function RecommendationForm({ onSubmit, loading }: Props) {
       .join(' ');
 
   const quantityOptions = useMemo(() => {
-    if (!form.crop) return [];
-    return QUANTITY_RANGES[form.crop] || [];
+    return getQuantityRangesForCrop(form.crop);
   }, [form.crop]);
 
   const selectedQuantity = quantityOptions.find(

@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import FarmerNotificationBell from '@/app/dashboard/farmer/components/notifications/FarmerNotificationBell';
 
 interface NavItem {
   name: string;
@@ -20,6 +21,11 @@ interface FarmerSidebarProps {
     photoURL?: string;
   } | null;
 }
+
+export const isFarmerNavigationItemActive = (
+  pathname: string,
+  itemPath: string
+) => pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 
 export default function FarmerSidebar({ user }: FarmerSidebarProps) {
   const pathname = usePathname();
@@ -142,6 +148,20 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
       )
     },
     {
+      name: 'My Recommendations',
+      path: '/dashboard/farmer/recommendations',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-4-7 4V5z"
+          />
+        </svg>
+      )
+    },
+    {
       name: 'Settings',
       path: '/dashboard/farmer/settings',
       icon: (
@@ -194,6 +214,7 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
     return (
       <>
         <MobileMenuButton />
+        <FarmerNotificationBell placement="mobile" />
 
         {/* Overlay */}
         {isMobileMenuOpen && (
@@ -237,7 +258,10 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
             <nav className="flex-1 p-4 overflow-y-auto">
               <ul className="space-y-2">
                 {navItems.map((item) => {
-                  const isActive = pathname === item.path;
+                  const isActive = isFarmerNavigationItemActive(
+                    pathname,
+                    item.path
+                  );
                   return (
                     <li key={item.path}>
                       <Link
@@ -317,11 +341,21 @@ export default function FarmerSidebar({ user }: FarmerSidebarProps) {
         </div>
       </Link>
 
+      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Notifications
+        </span>
+        <FarmerNotificationBell placement="desktop" />
+      </div>
+
       {/* Navigation Links */}
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.path;
+            const isActive = isFarmerNavigationItemActive(
+              pathname,
+              item.path
+            );
             return (
               <li key={item.path}>
                 <Link
