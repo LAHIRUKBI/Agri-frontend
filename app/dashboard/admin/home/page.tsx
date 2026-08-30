@@ -178,12 +178,16 @@ export default function AdminHomePage() {
             </div>
 
             {/* Pending Requests */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard/admin/soil-health-requests')}
+              className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow text-left"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 font-medium">Pending Requests</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">{stats.pendingRequests}</p>
-                  <p className="text-xs text-red-600 mt-2">Needs attention</p>
+                  <p className="text-xs text-red-600 mt-2">Needs attention in soil health queue</p>
                 </div>
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,7 +195,7 @@ export default function AdminHomePage() {
                   </svg>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -228,7 +232,11 @@ export default function AdminHomePage() {
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h2>
             <div className="space-y-3">
-              <button className="w-full flex items-center justify-between p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard/admin/farmers_view')}
+                className="w-full flex items-center justify-between p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,7 +253,11 @@ export default function AdminHomePage() {
                 </svg>
               </button>
 
-              <button className="w-full flex items-center justify-between p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard/admin/soil-health-requests')}
+                className="w-full flex items-center justify-between p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,8 +265,8 @@ export default function AdminHomePage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">Generate Report</p>
-                    <p className="text-xs text-gray-500">Create monthly activity report</p>
+                    <p className="text-sm font-medium text-gray-800">Soil Health Queue</p>
+                    <p className="text-xs text-gray-500">Review incoming farmer sensor requests</p>
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
