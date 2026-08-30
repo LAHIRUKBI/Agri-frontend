@@ -35,7 +35,6 @@ export default function FarmerHome() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check if user is authenticated
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
 
@@ -75,11 +74,17 @@ export default function FarmerHome() {
         setUser(prevUser => ({ ...prevUser, ...data }));
         localStorage.setItem('user', JSON.stringify({ ...JSON.parse(localStorage.getItem('user') || '{}'), ...data }));
         
-        // Fetch steps for active cultivations
         if (data.activeCultivations && data.activeCultivations.length > 0) {
           data.activeCultivations.forEach((cultivation: ActiveCultivation) => {
             fetchCropSteps(cultivation.cropName, cultivation._id);
           });
+        }
+      }
+
+      if (rotationResponse.ok) {
+        const rotationData = await rotationResponse.json();
+        if (Array.isArray(rotationData)) {
+          setRotationPlans(rotationData);
         }
       }
     } catch (error) {
@@ -114,7 +119,6 @@ export default function FarmerHome() {
     if (!cultivation.isTracking || !cropSteps[cultivation._id]) return 'Not started';
     const steps = cropSteps[cultivation._id];
     const currentIndex = cultivation.currentStepIndex || 0;
-    
     if (currentIndex >= steps.length) return 'Completed';
     return steps[currentIndex]?.stage || 'In progress';
   };
@@ -131,8 +135,8 @@ export default function FarmerHome() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-green-50">
         <div className="text-center">
-          <div className="w-12 h-12 border-3 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-500 text-sm">Loading your dashboard...</p>
+          <div className="w-14 h-14 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -144,6 +148,8 @@ export default function FarmerHome() {
     c.isTracking && cropSteps[c._id] && (c.currentStepIndex || 0) >= (cropSteps[c._id]?.length || 0)
   );
   const planningCultivations = activeCultivations.filter(c => !c.isTracking);
+
+  const latestRotationPlan = rotationPlans.length > 0 ? rotationPlans[0] : null;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -216,12 +222,10 @@ export default function FarmerHome() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-gray-800">Your Cultivation Journey</h2>
             </div>
-
-            {/* Horizontal Scroll Container */}
+            
             <div 
               ref={scrollContainerRef}
-              className="flex overflow-x-auto gap-3 pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-              style={{ scrollbarWidth: 'thin' }}
+              className="flex-1 overflow-x-auto overflow-y-hidden flex gap-5 pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent items-start"
             >
               {activeCultivations.map((cultivation) => {
                 const progress = calculateProgress(cultivation);
@@ -259,10 +263,9 @@ export default function FarmerHome() {
                       </div>
                     </div>
 
-                    {/* Content */}
-                    {cultivation.isTracking && !isCompleted && (
-                      <div className="space-y-2">
-                        {/* Progress Bar */}
+                  return (
+                    <div key={cultivation._id} className="flex-none w-72 rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                      <div className="flex justify-between items-start mb-4">
                         <div>
                           <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
                             <span>Progress</span>
@@ -275,18 +278,35 @@ export default function FarmerHome() {
                             ></div>
                           </div>
                         </div>
-                        
-                        {/* Stage Info */}
-                        <div className="flex justify-between text-xs">
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-bold shadow-sm ${
+                          cultivation.isTracking 
+                            ? (isCompleted ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'bg-green-100 text-green-800 border border-green-200')
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}>
+                          {cultivation.isTracking ? (isCompleted ? 'Finished' : 'Active') : 'Planned'}
+                        </span>
+                      </div>
+
+                      {cultivation.isTracking && !isCompleted && (
+                        <div className="space-y-4 mt-auto">
                           <div>
-                            <p className="text-[10px] text-gray-400">Stage</p>
-                            <p className="text-xs font-medium text-gray-700 truncate max-w-[100px]" title={currentStage}>
-                              {currentStage.length > 15 ? currentStage.substring(0, 12) + '...' : currentStage}
-                            </p>
+                            <div className="flex justify-between text-xs text-gray-500 mb-1.5 font-medium">
+                              <span>Progress</span>
+                              <span className="font-bold text-gray-900">{progress}%</span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-gray-100 shadow-inner">
+                              <div className="h-2 rounded-full bg-emerald-500 shadow-sm" style={{ width: `${progress}%` }}></div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-gray-400">Day</p>
-                            <p className="text-xs font-medium text-gray-700">{daysInStage}</p>
+                          <div className="flex justify-between items-end bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <div className="w-[70%]">
+                              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Stage</p>
+                              <p className="font-bold text-sm text-gray-800 truncate pr-2">{currentStage}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Day</p>
+                              <p className="font-extrabold text-lg text-emerald-700 leading-none">{daysInStage}</p>
+                            </div>
                           </div>
                         </div>
 
@@ -378,6 +398,8 @@ export default function FarmerHome() {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
 
               {trackedCultivations.length === 0 && activeCultivations.length === 0 && (
                 <div className="p-2 bg-green-50 rounded border border-green-100">
@@ -402,6 +424,7 @@ export default function FarmerHome() {
                 Manage All
               </button>
             </div>
+
           </div>
         </div>
       </main>
