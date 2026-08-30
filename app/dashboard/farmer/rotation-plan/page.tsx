@@ -249,14 +249,9 @@ export default function RotationPlanPage() {
   return (
     <div className="flex min-h-screen bg-stone-50" style={{ zoom: 1.1 }}>
       <FarmerSidebar user={user} />
-      {/* 
-        වෙනස: මෙහි max-w-5xl යන්න ඉවත් කර max-w-7xl ලෙස විශාල කර ඇත.
-        මෙමගින් අන්තර්ගතය තිරයේ පුළුල්ව විහිදේ.
-      */}
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="mx-auto max-w-7xl space-y-6">
 
-          {/* Hero Section styled like reference */}
           <section className="rounded-3xl border border-stone-200 bg-[radial-gradient(circle_at_top_left,_#f7fee7,_#fafaf9_55%)] p-6 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">Predict & Analyze</p>
             <h1 className="mt-2 text-3xl font-bold text-stone-900">Soil Evaluator & Crop Rotation</h1>
@@ -299,9 +294,6 @@ export default function RotationPlanPage() {
             </div>
           )}
 
-          {/* 
-            වෙනස: Form එක සහ දත්ත ඇතුලත් කිරීමේ කොටස් තිරයේ පළල අනුව විහිදෙන ලෙස සකසා ඇත
-          */}
           <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[1fr,1.5fr]">
             
             {/* 1. Target Crop Section */}
