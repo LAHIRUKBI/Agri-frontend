@@ -513,7 +513,7 @@ export default function CultivationViewPage() {
                   Get AI recommendations and start tracking your first crop.
                 </p>
                 <button
-                  onClick={() => router.push('/navigation/farmer/cultivation')}
+                  onClick={() => router.push('/dashboard/farmer/cultivation')}
                   className="bg-green-600 text-white text-xs font-medium px-4 py-2 rounded hover:bg-green-700 transition-colors"
                 >
                   Find Crops to Plant

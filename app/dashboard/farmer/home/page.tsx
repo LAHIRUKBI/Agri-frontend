@@ -563,13 +563,13 @@ export default function FarmerHome() {
             <div className="shrink-0 bg-white rounded-[32px] border border-gray-200 p-5 shadow-sm">
               <div className="grid grid-cols-2 gap-4">
                 <button
-                  onClick={() => router.push('/navigation/farmer/cultivation')}
+                  onClick={() => router.push('/dashboard/farmer/cultivation')}
                   className="rounded-2xl bg-emerald-50 border border-emerald-200 py-3 text-sm font-extrabold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-sm"
                 >
                   + Add New Crop
                 </button>
                 <button
-                  onClick={() => router.push('/navigation/farmer/cultivation/view')}
+                  onClick={() => router.push('/dashboard/farmer/profile')}
                   className="rounded-2xl bg-gray-50 border border-gray-200 py-3 text-sm font-extrabold text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
                 >
                   Manage Profile
