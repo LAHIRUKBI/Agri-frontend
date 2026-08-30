@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const readSource = async (path: string) =>
-  (await readFile(new URL(path, import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
+const readSource = (path: string) =>
+  readFile(new URL(path, import.meta.url), 'utf8');
 
 const resultScreenSource = await readSource(
   '../app/dashboard/farmer/prediction/components/sell-advisor/SellAdvisorResultScreen.tsx'

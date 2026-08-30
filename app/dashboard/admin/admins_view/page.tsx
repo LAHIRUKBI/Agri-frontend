@@ -1,3 +1,4 @@
+// app/dashboard/admin/page.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -29,6 +30,7 @@ export default function AdminManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('all');
   
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -172,37 +174,6 @@ export default function AdminManagementPage() {
     }
   };
 
-  // New Function to handle Admin deletion
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this admin? This action cannot be undone.")) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
-      const response = await fetch(`${API_URL}/admin/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to delete admin');
-      }
-
-      // Remove the deleted admin from state
-      setAdmins(prev => prev.filter(admin => admin._id !== id));
-      alert("Admin deleted successfully.");
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete admin');
-    }
-  };
-
   const getStatusBadge = (isActive: boolean) => {
     return isActive ? (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200">
@@ -255,7 +226,9 @@ export default function AdminManagementPage() {
       admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       admin.phoneNumber.includes(searchTerm);
     
-    return matchesSearch;
+    const matchesRole = selectedRole === 'all' || admin.role === selectedRole;
+    
+    return matchesSearch && matchesRole;
   });
 
   if (isLoading) {
@@ -299,9 +272,18 @@ export default function AdminManagementPage() {
                   placeholder="Search by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full text-black px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                 />
               </div>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white min-w-[150px]"
+              >
+                <option value="all">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="superadmin">Super Admin</option>
+              </select>
             </div>
           </div>
 
@@ -342,7 +324,7 @@ export default function AdminManagementPage() {
                     filteredAdmins.map((admin) => (
                       <tr key={admin._id} className="hover:bg-gray-50 transition-colors">
                         {editingId === admin._id ? (
-                          // Edit Mode (Added text-black font-medium to inputs for clear visibility)
+                          // Edit Mode
                           <>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
@@ -354,7 +336,7 @@ export default function AdminManagementPage() {
                                   name="name"
                                   value={editForm.name}
                                   onChange={handleEditChange}
-                                  className="text-black font-medium px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                  className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                   placeholder="Name"
                                 />
                               </div>
@@ -366,7 +348,7 @@ export default function AdminManagementPage() {
                                   name="email"
                                   value={editForm.email}
                                   onChange={handleEditChange}
-                                  className="w-full text-black font-medium px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                   placeholder="Email"
                                 />
                                 <input
@@ -374,7 +356,7 @@ export default function AdminManagementPage() {
                                   name="phoneNumber"
                                   value={editForm.phoneNumber}
                                   onChange={handleEditChange}
-                                  className="w-full text-black font-medium px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                   placeholder="Phone"
                                 />
                               </div>
@@ -384,7 +366,7 @@ export default function AdminManagementPage() {
                                 name="role"
                                 value={editForm.role}
                                 onChange={handleEditChange}
-                                className="text-black font-medium px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                                className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
                               >
                                 <option value="admin">Admin</option>
                                 <option value="superadmin">Super Admin</option>
@@ -399,7 +381,7 @@ export default function AdminManagementPage() {
                                   onChange={handleEditChange}
                                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 />
-                                <span className="text-sm text-black font-medium">Active</span>
+                                <span className="text-sm text-gray-600">Active</span>
                               </label>
                             </td>
                             <td className="py-3 px-4">
@@ -423,7 +405,7 @@ export default function AdminManagementPage() {
                                     value={editForm.password}
                                     onChange={handleEditChange}
                                     placeholder="New password"
-                                    className="w-full text-black font-medium px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                   />
                                 )}
                                 <div className="flex items-center gap-2">
@@ -508,12 +490,7 @@ export default function AdminManagementPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                   </svg>
                                 </button>
-                                {/* Added Delete Function Trigger */}
-                                <button 
-                                  onClick={() => handleDelete(admin._id)}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" 
-                                  title="Delete"
-                                >
+                                <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                   </svg>
@@ -534,6 +511,70 @@ export default function AdminManagementPage() {
               <p className="text-xs text-gray-500">
                 Showing <span className="font-medium">{filteredAdmins.length}</span> of <span className="font-medium">{admins.length}</span> administrators
               </p>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Total Admins</p>
+                  <p className="text-2xl font-semibold text-gray-900 mt-1">{admins.length}</p>
+                </div>
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <span className="text-green-600 font-medium">{admins.filter(a => a.isActive).length} active</span>
+                <span className="text-gray-300">•</span>
+                <span className="text-gray-500">{admins.filter(a => !a.isActive).length} inactive</span>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Role Distribution</p>
+                  <p className="text-2xl font-semibold text-gray-900 mt-1">
+                    {admins.filter(a => a.role === 'admin').length} / {admins.filter(a => a.role === 'superadmin').length}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <span className="text-blue-600 font-medium">{admins.filter(a => a.role === 'admin').length} Admins</span>
+                <span className="text-gray-300">•</span>
+                <span className="text-purple-600">{admins.filter(a => a.role === 'superadmin').length} Super Admins</span>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Recent Activity</p>
+                  <p className="text-2xl font-semibold text-gray-900 mt-1">
+                    {admins.filter(a => {
+                      if (!a.lastLogin) return false;
+                      const daysSince = Math.floor((Date.now() - new Date(a.lastLogin).getTime()) / (1000 * 60 * 60 * 24));
+                      return daysSince < 7;
+                    }).length}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">Active in last 7 days</p>
             </div>
           </div>
         </div>

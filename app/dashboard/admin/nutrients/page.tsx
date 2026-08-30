@@ -6,42 +6,15 @@ export default function SoilNutrientsPage() {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
-  const fallbackConfig = {
-    phMin: 6,
-    phMax: 7,
-    nutrients: [] as Array<{
-      _id?: string;
-      name: string;
-      symbol: string;
-      type: string;
-      min: number;
-      max: number;
-      unit: string;
-    }>
-  };
 
   useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const response = await fetch(`${API_URL}/nutrients`);
-        if (!response.ok) {
-          throw new Error('Could not load soil nutrients because the backend server is unavailable.');
-        }
-        const data = await response.json();
+    fetch('http://localhost:5000/api/nutrients')
+      .then(res => res.json())
+      .then(data => {
         if (data.success) setConfig(data.data);
-        else throw new Error(data.message || 'Could not load soil nutrients.');
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Could not load soil nutrients.');
-      } finally {
         setLoading(false);
-      }
-    };
-    void loadConfig();
-  }, [API_URL]);
+      });
+  }, []);
 
   const handleNutrientChange = (index: number, field: string, value: string) => {
     const updated = { ...config };
@@ -62,14 +35,11 @@ export default function SoilNutrientsPage() {
     // If the nutrient exists in the database (has an _id), call the backend to delete it
     if (nutrientId) {
       try {
-        const response = await fetch(`${API_URL}/nutrients/${nutrientId}`, {
+        await fetch(`http://localhost:5000/api/nutrients/${nutrientId}`, {
           method: 'DELETE',
         });
-        if (!response.ok) {
-          throw new Error('Delete request failed.');
-        }
       } catch (error) {
-        setError('Failed to delete nutrient from the backend.');
+        console.error("Failed to delete from database", error);
         return alert("Error deleting nutrient.");
       }
     }
@@ -81,28 +51,17 @@ export default function SoilNutrientsPage() {
   };
 
   const saveConfig = async () => {
-    try {
-      setSaving(true);
-      setError('');
-      const response = await fetch(`${API_URL}/nutrients`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
-      });
-      if (!response.ok) {
-        throw new Error('Save request failed.');
-      }
-      alert('Soil configuration updated successfully!');
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Could not save nutrient changes.');
-    } finally {
-      setSaving(false);
-    }
+    setSaving(true);
+    await fetch('http://localhost:5000/api/nutrients', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    alert('Soil configuration updated successfully!');
+    setSaving(false);
   };
 
   if (loading) return <div className="flex min-h-screen bg-white"><main className="flex-1 p-6">Loading...</main></div>;
-
-  const safeConfig = config ?? fallbackConfig;
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -113,11 +72,6 @@ export default function SoilNutrientsPage() {
 
       {/* Main content area */}
       <main className="flex-1 p-6 max-w-5xl mx-auto space-y-6">
-        {error && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            {error}
-          </div>
-        )}
         <div className="flex justify-between items-center border-b border-gray-200 pb-3">
           <h1 className="text-2xl font-bold text-black">Soil Nutrients Management</h1>
           <button
@@ -138,8 +92,8 @@ export default function SoilNutrientsPage() {
               <input
                 type="number"
                 step="0.1"
-                value={safeConfig.phMin}
-                onChange={e => setConfig({...(config ?? fallbackConfig), phMin: Number(e.target.value)})}
+                value={config.phMin}
+                onChange={e => setConfig({...config, phMin: Number(e.target.value)})}
                 className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
@@ -148,8 +102,8 @@ export default function SoilNutrientsPage() {
               <input
                 type="number"
                 step="0.1"
-                value={safeConfig.phMax}
-                onChange={e => setConfig({...(config ?? fallbackConfig), phMax: Number(e.target.value)})}
+                value={config.phMax}
+                onChange={e => setConfig({...config, phMax: Number(e.target.value)})}
                 className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
@@ -168,7 +122,7 @@ export default function SoilNutrientsPage() {
             </button>
           </div>
 
-          {safeConfig.nutrients.map((nut: any, i: number) => (
+          {config.nutrients.map((nut: any, i: number) => (
             <div key={i} className="flex flex-wrap gap-3 items-end p-3 bg-gray-50 rounded-md border border-gray-100 relative">
               <div className="flex-1 min-w-[130px]">
                 <label className="block text-xs font-medium text-black mb-1">Name</label>

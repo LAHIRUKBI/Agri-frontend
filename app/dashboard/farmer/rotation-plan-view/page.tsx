@@ -427,7 +427,7 @@ export default function RotationPlansPage() {
                     </div>
                   )}
 
-                  {/* Past Crops – FIXED HERE */}
+                  {/* Past Crops */}
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Past Crops History</h4>
                     <div className="space-y-3">
@@ -437,21 +437,14 @@ export default function RotationPlansPage() {
                             <span className="font-semibold text-gray-800">{crop.cropName}</span>
                             <span className="text-xs text-gray-500">{crop.timePeriod}</span>
                           </div>
-                          {/* SAFE RENDERING OF ARRAYS */}
-                          {crop.fertilizers && Array.isArray(crop.fertilizers) && crop.fertilizers.length > 0 && (
+                          {crop.fertilizers && (
                             <p className="text-xs text-gray-600 mb-1">
-                              <span className="font-medium">Fertilizers:</span>{' '}
-                              {crop.fertilizers
-                                .map(f => `${f.name} (${f.amount_g}g)`)
-                                .join(', ')}
+                              <span className="font-medium">Fertilizers:</span> {crop.fertilizers}
                             </p>
                           )}
-                          {crop.pesticides && Array.isArray(crop.pesticides) && crop.pesticides.length > 0 && (
+                          {crop.pesticides && (
                             <p className="text-xs text-gray-600">
-                              <span className="font-medium">Pesticides:</span>{' '}
-                              {crop.pesticides
-                                .map(p => `${p.name} (${p.amount_g}g)`)
-                                .join(', ')}
+                              <span className="font-medium">Pesticides:</span> {crop.pesticides}
                             </p>
                           )}
                         </div>
