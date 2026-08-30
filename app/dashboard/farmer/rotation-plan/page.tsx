@@ -177,13 +177,27 @@ export default function RotationPlanPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <FarmerSidebar user={user} />
-      <main className="flex-1 overflow-y-auto py-6 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto space-y-4">
+      {/* 
+        වෙනස: මෙහි max-w-5xl යන්න ඉවත් කර max-w-7xl ලෙස විශාල කර ඇත.
+        මෙමගින් අන්තර්ගතය තිරයේ පුළුල්ව විහිදේ.
+      */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="mx-auto max-w-7xl space-y-6">
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h1 className="text-xl font-semibold text-green-800">Crop Rotation & Soil Evaluator</h1>
-            <p className="text-xs text-gray-500 mt-1">Analyze historical data for nutrient predictions and planting suggestions</p>
-          </div>
+          {/* Hero Section styled like reference */}
+          <section className="rounded-3xl border border-stone-200 bg-[radial-gradient(circle_at_top_left,_#f7fee7,_#fafaf9_55%)] p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">Predict & Analyze</p>
+            <h1 className="mt-2 text-3xl font-bold text-stone-900">Soil Evaluator & Crop Rotation</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
+              Analyze your historical crop data and applied fertilizers to predict current soil nutrient levels and evaluate crop suitability.
+            </p>
+          </section>
+
+          {infoMessage && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+              {infoMessage}
+            </div>
+          )}
 
           {initialSoilData && (
             <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
@@ -214,14 +228,17 @@ export default function RotationPlanPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="px-4 py-2 bg-green-600">
-                <h2 className="text-xs font-semibold text-white">1. Target Crop</h2>
-              </div>
-              <div className="p-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <label className="text-xs font-medium text-black w-24">Crop to plant:</label>
+          {/* 
+            වෙනස: Form එක සහ දත්ත ඇතුලත් කිරීමේ කොටස් තිරයේ පළල අනුව විහිදෙන ලෙස සකසා ඇත
+          */}
+          <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[1fr,1.5fr]">
+            
+            {/* 1. Target Crop Section */}
+            <div className="rounded-3xl border border-stone-200 bg-white p-5 md:p-6 shadow-sm h-fit">
+              <h2 className="text-lg font-semibold text-stone-900 mb-5">1. Target Crop Validation</h2>
+              <div className="flex flex-col gap-4">
+                <div className="w-full">
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700">Crop to plant:</label>
                   <input
                     type="text" required placeholder="e.g., Tomato, Carrot"
                     className="text-black flex-1 text-sm px-3 py-2 border border-gray-200 rounded bg-gray-50 focus:ring-1 focus:ring-green-400 outline-none"
