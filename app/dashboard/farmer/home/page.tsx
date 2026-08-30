@@ -63,6 +63,18 @@ interface SoilRequest {
   };
 }
 
+interface RotationPlan {
+  _id: string;
+  targetCrop: string;
+  currentMonth: string;
+  targetEvaluation?: {
+    isSuitable: boolean;
+    feedback: string[];
+    aiSoilRemedy?: string;
+  };
+  createdAt: string;
+}
+
 function getSoilStatusTone(classification?: string) {
   switch (classification) {
     case 'Excellent':
@@ -89,6 +101,60 @@ function getRequestTone(status: SoilRequest['status']) {
   }
 }
 
+// Enlarged Digital Countdown
+const MiniDigitalCountdown = ({ targetDate }: { targetDate: Date }) => {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate.getTime() - now;
+
+      if (distance <= 0) {
+        clearInterval(timer);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+      } else {
+        setTimeLeft({
+          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((distance % (1000 * 60)) / 1000),
+          isExpired: false
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  if (timeLeft.isExpired) {
+    return (
+      <div className="bg-emerald-50 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold border border-emerald-200 text-center shadow-sm animate-pulse">
+        Time is up! Advance stage.
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2 text-center font-mono justify-center items-center">
+      <div className="bg-gray-900 text-emerald-400 rounded-xl p-2 min-w-[42px] shadow-inner border border-gray-700">
+        <span className="text-base font-bold block leading-none">{String(timeLeft.days).padStart(2, '0')}</span>
+        <span className="text-[9px] text-gray-400 uppercase font-sans tracking-widest mt-1 block">Day</span>
+      </div>
+      <div className="text-gray-400 text-sm font-bold flex items-center pb-2">:</div>
+      <div className="bg-gray-900 text-white rounded-xl p-2 min-w-[42px] shadow-inner border border-gray-700">
+        <span className="text-base font-bold block leading-none">{String(timeLeft.hours).padStart(2, '0')}</span>
+        <span className="text-[9px] text-gray-400 uppercase font-sans tracking-widest mt-1 block">Hrs</span>
+      </div>
+      <div className="text-gray-400 text-sm font-bold flex items-center pb-2">:</div>
+      <div className="bg-gray-900 text-white rounded-xl p-2 min-w-[42px] shadow-inner border border-gray-700">
+        <span className="text-base font-bold block leading-none">{String(timeLeft.minutes).padStart(2, '0')}</span>
+        <span className="text-[9px] text-gray-400 uppercase font-sans tracking-widest mt-1 block">Min</span>
+      </div>
+    </div>
+  );
+};
+
 export default function FarmerHome() {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,11 +163,12 @@ export default function FarmerHome() {
   const [loadingSteps, setLoadingSteps] = useState<Record<string, boolean>>({});
   const [soilHistory, setSoilHistory] = useState<SoilRecord[]>([]);
   const [soilRequests, setSoilRequests] = useState<SoilRequest[]>([]);
+  const [rotationPlans, setRotationPlans] = useState<RotationPlan[]>([]);
+  
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check if user is authenticated
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
 
@@ -125,25 +192,15 @@ export default function FarmerHome() {
   const fetchUserDetails = async (userId: string, token: string) => {
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      const [userResponse, historyResponse, requestsResponse] = await Promise.all([
-        fetch(`${API_URL}/users/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }),
-        fetch(`${API_URL}/soil-health/history`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }),
-        fetch(`${API_URL}/soil-health/requests/my`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+      
+      const [userResponse, historyResponse, requestsResponse, rotationResponse] = await Promise.all([
+        fetch(`${API_URL}/users/${userId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/soil-health/history`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/soil-health/requests/my`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/rotation/history`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
 
-      if (userResponse.status === 401 || historyResponse.status === 401 || requestsResponse.status === 401) {
+      if (userResponse.status === 401 || historyResponse.status === 401 || requestsResponse.status === 401 || rotationResponse.status === 401) {
         router.push('/signin');
         return;
       }
@@ -153,7 +210,6 @@ export default function FarmerHome() {
         setUser(prevUser => ({ ...prevUser, ...data }));
         localStorage.setItem('user', JSON.stringify({ ...JSON.parse(localStorage.getItem('user') || '{}'), ...data }));
         
-        // Fetch steps for active cultivations
         if (data.activeCultivations && data.activeCultivations.length > 0) {
           data.activeCultivations.forEach((cultivation: ActiveCultivation) => {
             fetchCropSteps(cultivation.cropName, cultivation._id);
@@ -174,6 +230,13 @@ export default function FarmerHome() {
         const requestsData = await requestsResponse.json();
         if (requestsData.success) {
           setSoilRequests(requestsData.data);
+        }
+      }
+
+      if (rotationResponse.ok) {
+        const rotationData = await rotationResponse.json();
+        if (Array.isArray(rotationData)) {
+          setRotationPlans(rotationData);
         }
       }
     } catch (error) {
@@ -208,7 +271,6 @@ export default function FarmerHome() {
     if (!cultivation.isTracking || !cropSteps[cultivation._id]) return 'Not started';
     const steps = cropSteps[cultivation._id];
     const currentIndex = cultivation.currentStepIndex || 0;
-    
     if (currentIndex >= steps.length) return 'Completed';
     return steps[currentIndex]?.stage || 'In progress';
   };
@@ -225,8 +287,8 @@ export default function FarmerHome() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-green-50">
         <div className="text-center">
-          <div className="w-12 h-12 border-3 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-500 text-sm">Loading your dashboard...</p>
+          <div className="w-14 h-14 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -238,6 +300,7 @@ export default function FarmerHome() {
     c.isTracking && cropSteps[c._id] && (c.currentStepIndex || 0) >= (cropSteps[c._id]?.length || 0)
   );
   const planningCultivations = activeCultivations.filter(c => !c.isTracking);
+  
   const latestSoilRecord = soilHistory[0];
   const pendingSoilRequests = soilRequests.filter(request => request.status === 'pending' || request.status === 'approved');
   const completedSoilChecks = soilHistory.length;
@@ -245,375 +308,275 @@ export default function FarmerHome() {
     ? Math.round(soilHistory.reduce((sum, record) => sum + record.result.score, 0) / soilHistory.length)
     : 0;
 
+  const latestRotationPlan = rotationPlans.length > 0 ? rotationPlans[0] : null;
+
   return (
-    <div className="flex min-h-screen bg-[linear-gradient(180deg,_#f4f7f4_0%,_#f8faf8_48%,_#f3f6f4_100%)]">
+    // Single Screen Container - no page scroll allowed
+    <div className="flex h-screen bg-[linear-gradient(180deg,_#f4f7f4_0%,_#f8faf8_48%,_#f3f6f4_100%)] overflow-hidden">
       <FarmerSidebar user={user} />
       
-      {/* Main Content */}
-      <main className="flex-1 p-6 overflow-y-auto">
+      {/* Main Content Area - strictly controlled flex structure with enlarged gaps/paddings */}
+      <main className="flex-1 p-5 md:p-6 flex flex-col gap-5 overflow-hidden">
+        
+        {/* Error Alert */}
         {pageError && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <div className="shrink-0 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 font-medium shadow-sm">
             {pageError}
           </div>
         )}
-        {/* Welcome Section - Smaller */}
-        <div className="mb-6 rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,_rgba(255,255,255,0.9),_rgba(244,251,246,0.95))] px-5 py-5 shadow-[0_20px_45px_-32px_rgba(22,101,52,0.28)]">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            Welcome back, {user?.name?.split(' ')[0] || 'Farmer'}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">Here&apos;s your farm activity overview</p>
-        </div>
 
-        {/* Stats Grid - Smaller and more compact */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {/* Active Crops */}
-          <div className="rounded-[22px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)]">
-            <p className="text-xs font-medium text-gray-500 mb-1">Total Crops</p>
-            <p className="text-2xl font-bold tracking-tight text-gray-900">{activeCultivations.length}</p>
-            <div className="flex items-center gap-2 mt-1 text-xs">
-              <span className="text-green-600">{trackedCultivations.length} tracking</span>
-              <span className="text-gray-300">|</span>
-              <span className="text-amber-600">{planningCultivations.length} planned</span>
+        {/* 1. Header & Top Stats (Row 1) */}
+        <div className="shrink-0 grid grid-cols-12 gap-5 h-[16%] min-h-[120px]">
+          {/* Welcome Card */}
+          <div className="col-span-12 xl:col-span-4 rounded-[24px] border border-white/70 bg-[linear-gradient(135deg,_rgba(255,255,255,0.9),_rgba(244,251,246,0.95))] px-6 py-5 shadow-sm flex flex-col justify-center">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 leading-tight">
+              Welcome, {user?.name?.split(' ')[0] || 'Farmer'}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1 font-medium">Your farm activity overview</p>
+          </div>
+          
+          {/* 4 Stats Cards */}
+          <div className="col-span-12 xl:col-span-8 grid grid-cols-4 gap-5">
+            <div className="rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-5 shadow-sm flex flex-col justify-center">
+              <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Total Crops</p>
+              <div className="flex items-end gap-2 mt-1">
+                <p className="text-4xl font-extrabold tracking-tight text-gray-900 leading-none">{activeCultivations.length}</p>
+                <span className="text-sm font-semibold text-green-600 mb-1">{trackedCultivations.length} active</span>
+              </div>
             </div>
-          </div>
-
-          {/* In Progress */}
-          <div className="rounded-[22px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)]">
-            <p className="text-xs font-medium text-gray-500 mb-1">In Progress</p>
-            <p className="text-2xl font-bold tracking-tight text-gray-900">{trackedCultivations.length - completedCultivations.length}</p>
-            <p className="text-xs text-gray-500 mt-1">{completedCultivations.length} completed</p>
-          </div>
-
-          {/* Average Progress */}
-          <div className="rounded-[22px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)]">
-            <p className="text-xs font-medium text-gray-500 mb-1">Avg Progress</p>
-            <p className="text-2xl font-bold tracking-tight text-gray-900">
-              {trackedCultivations.length > 0 
-                ? Math.round(trackedCultivations.reduce((acc, c) => acc + calculateProgress(c), 0) / trackedCultivations.length) 
-                : 0}%
-            </p>
-            <div className="mt-2 h-1.5 w-full rounded-full bg-gray-200">
-              <div 
-                className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 transition-all duration-500" 
-                style={{ width: `${trackedCultivations.length > 0 
-                  ? Math.round(trackedCultivations.reduce((acc, c) => acc + calculateProgress(c), 0) / trackedCultivations.length) 
-                  : 0}%` 
-                }}
-              ></div>
+            <div className="rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-5 shadow-sm flex flex-col justify-center">
+              <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">In Progress</p>
+              <div className="flex items-end gap-2 mt-1">
+                <p className="text-4xl font-extrabold tracking-tight text-gray-900 leading-none">{trackedCultivations.length - completedCultivations.length}</p>
+                <span className="text-sm font-semibold text-gray-500 mb-1">{completedCultivations.length} done</span>
+              </div>
             </div>
-          </div>
-
-          {/* Latest Stage Day */}
-          <div className="rounded-[22px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)]">
-            <p className="text-xs font-medium text-gray-500 mb-1">Latest Stage</p>
-            <p className="text-2xl font-bold tracking-tight text-gray-900">
-              {trackedCultivations.length > 0 
-                ? `Day ${Math.max(...trackedCultivations.map(c => getDaysInCurrentStage(c)))}` 
-                : 'Day 0'}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Current stage</p>
+            <div className="rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-5 shadow-sm flex flex-col justify-center">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg Progress</p>
+                <p className="text-xl font-bold tracking-tight text-gray-900 leading-none">
+                  {trackedCultivations.length > 0 ? Math.round(trackedCultivations.reduce((acc, c) => acc + calculateProgress(c), 0) / trackedCultivations.length) : 0}%
+                </p>
+              </div>
+              <div className="h-2.5 w-full rounded-full bg-gray-200 mt-2 shadow-inner">
+                <div className="h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 shadow-sm transition-all" 
+                  style={{ width: `${trackedCultivations.length > 0 ? Math.round(trackedCultivations.reduce((acc, c) => acc + calculateProgress(c), 0) / trackedCultivations.length) : 0}%` }}>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(247,250,248,0.98))] p-5 shadow-sm flex flex-col justify-center">
+              <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Latest Stage</p>
+              <p className="text-3xl font-extrabold tracking-tight text-gray-900 mt-1 leading-none">
+                {trackedCultivations.length > 0 ? `Day ${Math.max(...trackedCultivations.map(c => getDaysInCurrentStage(c)))}` : 'Day 0'}
+              </p>
+            </div>
           </div>
         </div>
 
-        <section className="mb-6 rounded-[24px] border border-emerald-100 bg-[linear-gradient(135deg,_#f7fff8,_#ffffff_62%,_#f4fbf7)] p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.26em] text-emerald-700">Soil Health Overview</p>
-              <h2 className="mt-1 text-sm font-semibold text-gray-800">Latest score and request status</h2>
+        {/* 2. Soil & Rotation (Row 2 - Takes moderate height) */}
+        <div className="shrink-0 grid grid-cols-12 gap-5 h-[28%] min-h-[200px]">
+          {/* Soil Health */}
+          <section className="col-span-12 xl:col-span-6 rounded-[28px] border border-emerald-100 bg-[linear-gradient(135deg,_#f7fff8,_#ffffff_62%,_#f4fbf7)] p-5 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700">Soil Health Overview</p>
+              <button onClick={() => router.push('/dashboard/farmer/soil-health')} className="rounded-full bg-white border-2 border-emerald-200 px-5 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 shadow-sm transition-colors">
+                View Details
+              </button>
             </div>
-            <button
-              onClick={() => router.push('/dashboard/farmer/soil-health')}
-              className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
-            >
-              Open Soil Health
-            </button>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <div className="rounded-2xl border border-white/70 bg-white/90 p-3 shadow-sm">
-              <p className="text-xs font-medium text-gray-500">Assessments</p>
-              <p className="mt-1 text-xl font-bold text-gray-800">{completedSoilChecks}</p>
-            </div>
-            <div className="rounded-2xl border border-white/70 bg-white/90 p-3 shadow-sm">
-              <p className="text-xs font-medium text-gray-500">Average soil score</p>
-              <p className="mt-1 text-xl font-bold text-gray-800">{averageSoilScore}</p>
-            </div>
-            <div className="rounded-2xl border border-white/70 bg-white/90 p-3 shadow-sm">
-              <p className="text-xs font-medium text-gray-500">Active requests</p>
-              <p className="mt-1 text-xl font-bold text-gray-800">{pendingSoilRequests.length}</p>
-            </div>
-            <div className="rounded-2xl border border-white/70 bg-white/90 p-3 shadow-sm">
-              <p className="text-xs font-medium text-gray-500">Latest soil type</p>
-              <p className="mt-1 text-sm font-bold text-gray-800">{latestSoilRecord?.result.soilType || 'No data yet'}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 lg:grid-cols-[1.05fr,0.95fr]">
-            <div className="rounded-[22px] border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-gray-800">Latest soil snapshot</h3>
-                {latestSoilRecord && (
-                  <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${getSoilStatusTone(latestSoilRecord.result.classification)}`}>
-                    {latestSoilRecord.result.classification}
-                  </span>
-                )}
+            <div className="grid grid-cols-4 gap-4 flex-1">
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Total Checks</p>
+                <p className="text-2xl font-bold text-gray-900">{completedSoilChecks}</p>
+                <p className="text-[11px] font-medium text-gray-500 mt-1">Avg Score {averageSoilScore}</p>
               </div>
-
-              {latestSoilRecord ? (
-                <div className="mt-3 grid gap-3 sm:grid-cols-[0.7fr,1fr,0.7fr]">
-                  <div className="rounded-2xl bg-gray-900 px-4 py-4 text-white">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-200">Score</p>
-                    <p className="mt-1 text-3xl font-bold">{latestSoilRecord.result.score}</p>
-                  </div>
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                    <p className="text-[11px] text-gray-500">Field</p>
-                    <p className="mt-1 text-sm font-semibold text-gray-800">
-                      {latestSoilRecord.district}
-                      {latestSoilRecord.location ? ` | ${latestSoilRecord.location}` : ''}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                    <p className="text-[11px] text-gray-500">pH</p>
-                    <p className="mt-1 text-sm font-semibold text-gray-800">{latestSoilRecord.result.readings.ph}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-                  No soil assessments yet.
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-[22px] border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-gray-800">Latest request</h3>
-                {soilRequests[0] && (
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getRequestTone(soilRequests[0].status)}`}>
-                    {soilRequests[0].status === 'approved' ? 'Scheduled' : soilRequests[0].status}
-                  </span>
-                )}
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Latest Type</p>
+                <p className="text-lg font-bold text-gray-900 truncate w-full">{latestSoilRecord?.result.soilType || '--'}</p>
               </div>
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Latest pH</p>
+                <p className="text-2xl font-bold text-gray-900">{latestSoilRecord?.result.readings.ph || '--'}</p>
+              </div>
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Requests</p>
+                <p className="text-2xl font-bold text-gray-900">{pendingSoilRequests.length}</p>
+              </div>
+            </div>
+          </section>
 
-              {soilRequests[0] ? (
-                <div className="mt-3 space-y-3">
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-3">
-                    <p className="text-sm font-semibold text-gray-800">
-                      {soilRequests[0].district}
-                      {soilRequests[0].location ? ` | ${soilRequests[0].location}` : ''}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">{soilRequests[0].cropType || 'General field check'}</p>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                      <p>Preferred: {soilRequests[0].preferredDate ? new Date(soilRequests[0].preferredDate).toLocaleDateString() : 'Not set'}</p>
-                      <p>Visit: {soilRequests[0].scheduledDate ? new Date(soilRequests[0].scheduledDate).toLocaleDateString() : 'Pending'}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    {pendingSoilRequests.length > 0
-                      ? 'You have active soil visit requests in progress.'
-                      : 'Open Soil Health to create or review requests.'}
+          {/* Rotation Plans */}
+          <section className="col-span-12 xl:col-span-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,_#f0f9ff,_#ffffff_62%,_#f0fdfa)] p-5 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-blue-700">Crop Rotation</p>
+              <button onClick={() => router.push('/dashboard/farmer/rotation-plan')} className="rounded-full bg-white border-2 border-blue-200 px-5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50 shadow-sm transition-colors">
+                View Plans
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-4 flex-1">
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Total Plans</p>
+                <p className="text-2xl font-bold text-gray-900">{rotationPlans.length}</p>
+                <p className="text-[11px] font-semibold text-green-600 mt-1">{rotationPlans.filter(p => p.targetEvaluation?.isSuitable).length} Suitable</p>
+              </div>
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Target Crop</p>
+                <p className="text-lg font-bold text-gray-900 truncate w-full">{latestRotationPlan?.targetCrop || '--'}</p>
+              </div>
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Target Season</p>
+                <p className="text-lg font-bold text-gray-900 truncate w-full">{latestRotationPlan?.currentMonth || '--'}</p>
+              </div>
+              <div className="rounded-[20px] border border-white/70 bg-white/90 p-3 shadow-sm flex flex-col justify-center items-center overflow-hidden">
+                <p className="text-xs font-semibold text-gray-500 mb-1">AI Soil Tip</p>
+                {latestRotationPlan?.targetEvaluation?.aiSoilRemedy ? (
+                  <p className="text-[11px] font-medium text-gray-800 line-clamp-3 leading-snug text-center">
+                    {latestRotationPlan.targetEvaluation.aiSoilRemedy}
                   </p>
-                </div>
-              ) : (
-                <div className="mt-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-                  No soil sensor requests yet.
-                </div>
-              )}
+                ) : (
+                  <p className="text-xs text-gray-400 font-medium">No tip found</p>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
-        {/* Active Cultivations Section - Horizontal Scroll */}
-        {activeCultivations.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-gray-800">Your Cultivation Journey</h2>
+        {/* 3. Bottom Row: Journey + Tracking/Actions (Takes all remaining height dynamically) */}
+        <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
+          
+          {/* Left Side: Journey Slider */}
+          <div className="col-span-12 xl:col-span-8 flex flex-col bg-[linear-gradient(180deg,_#ffffff,_#fcfdfc)] rounded-[32px] border border-gray-200 p-5 shadow-sm min-h-0">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <h2 className="text-lg font-bold text-gray-900">Your Cultivation Journey</h2>
+              <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-3 py-1 rounded-full">Scroll horizontally →</span>
             </div>
-
-            {/* Horizontal Scroll Container */}
+            
             <div 
               ref={scrollContainerRef}
-              className="flex overflow-x-auto gap-3 pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-              style={{ scrollbarWidth: 'thin' }}
+              className="flex-1 overflow-x-auto overflow-y-hidden flex gap-5 pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent items-start"
             >
-              {activeCultivations.map((cultivation) => {
-                const progress = calculateProgress(cultivation);
-                const currentStage = getCurrentStage(cultivation);
-                const daysInStage = getDaysInCurrentStage(cultivation);
-                const isCompleted = cultivation.isTracking && 
-                  cropSteps[cultivation._id] && 
-                  (cultivation.currentStepIndex || 0) >= (cropSteps[cultivation._id]?.length || 0);
-
-                return (
-                  <div 
-                    key={cultivation._id} 
-                    className="flex-none w-64 rounded-[22px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(246,249,247,0.98))] p-3 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-28px_rgba(22,101,52,0.25)]"
-                  >
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="font-medium text-sm text-gray-800">{cultivation.cropName}</h3>
-                        <p className="text-xs text-gray-400">{cultivation.district}</p>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        {cultivation.isTracking ? (
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                            isCompleted 
-                              ? 'bg-yellow-100 text-yellow-700' 
-                              : 'bg-green-100 text-green-700'
-                          }`}>
-                            {isCompleted ? 'Done' : 'Active'}
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">
-                            Plan
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    {cultivation.isTracking && !isCompleted && (
-                      <div className="space-y-2">
-                        {/* Progress Bar */}
-                        <div>
-                          <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
-                            <span>Progress</span>
-                            <span className="font-medium">{progress}%</span>
-                          </div>
-                          <div className="h-1 w-full rounded-full bg-gray-200">
-                            <div 
-                              className="h-1 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 transition-all duration-500" 
-                              style={{ width: `${progress}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        
-                        {/* Stage Info */}
-                        <div className="flex justify-between text-xs">
-                          <div>
-                            <p className="text-[10px] text-gray-400">Stage</p>
-                            <p className="text-xs font-medium text-gray-700 truncate max-w-[100px]" title={currentStage}>
-                              {currentStage.length > 15 ? currentStage.substring(0, 12) + '...' : currentStage}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-gray-400">Day</p>
-                            <p className="text-xs font-medium text-gray-700">{daysInStage}</p>
-                          </div>
-                        </div>
-
-                        {loadingSteps[cultivation._id] && (
-                          <p className="text-[10px] text-gray-400 italic">Loading...</p>
-                        )}
-                      </div>
-                    )}
-
-                    {cultivation.isTracking && isCompleted && (
-                      <div className="mt-1 rounded-2xl border border-yellow-100 bg-yellow-50 p-2">
-                        <p className="text-xs font-medium text-yellow-700">Ready for Harvest</p>
-                      </div>
-                    )}
-
-                    {!cultivation.isTracking && (
-                      <div className="mt-1 rounded-2xl border border-blue-100 bg-blue-50 p-2">
-                        <p className="text-xs font-medium text-blue-700">Ready to start</p>
-                      </div>
-                    )}
-
-                    {/* Added Date - Small */}
-                    <p className="text-[9px] text-gray-300 mt-2">
-                      Added {new Date(cultivation.startDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Scroll Hint - Optional */}
-            {activeCultivations.length > 3 && (
-              <p className="text-[10px] text-gray-400 text-right mt-1">
-                ← Scroll for more →
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Bottom Grid - More Compact */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {/* Active Tracking Summary */}
-          <div className="lg:col-span-2 rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(246,249,247,0.98))] p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)]">
-            <h2 className="text-sm font-semibold text-gray-800 mb-3">Active Tracking</h2>
-            {trackedCultivations.length > 0 ? (
-              <div className="space-y-2">
-                {trackedCultivations.slice(0, 3).map((cultivation) => {
+              {activeCultivations.length > 0 ? (
+                activeCultivations.map((cultivation) => {
+                  const progress = calculateProgress(cultivation);
                   const currentStage = getCurrentStage(cultivation);
-                  const isCompleted = cropSteps[cultivation._id] && 
+                  const daysInStage = getDaysInCurrentStage(cultivation);
+                  const isCompleted = cultivation.isTracking && cropSteps[cultivation._id] && 
                     (cultivation.currentStepIndex || 0) >= (cropSteps[cultivation._id]?.length || 0);
-                  
-                  if (isCompleted) return null;
 
                   return (
-                    <div key={cultivation._id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50/90 p-3 text-xs">
-                      <div>
-                        <h3 className="font-medium text-gray-800 text-xs">{cultivation.cropName}</h3>
-                        <p className="text-[10px] text-gray-500">Stage: {currentStage.length > 20 ? currentStage.substring(0, 17) + '...' : currentStage}</p>
+                    <div key={cultivation._id} className="flex-none w-72 rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-extrabold text-lg text-gray-900 leading-tight">{cultivation.cropName}</h3>
+                          <p className="text-xs font-medium text-gray-400 mt-1">{cultivation.district}</p>
+                        </div>
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-bold shadow-sm ${
+                          cultivation.isTracking 
+                            ? (isCompleted ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'bg-green-100 text-green-800 border border-green-200')
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}>
+                          {cultivation.isTracking ? (isCompleted ? 'Finished' : 'Active') : 'Planned'}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs font-medium text-green-600">{calculateProgress(cultivation)}%</p>
-                        <p className="text-[10px] text-gray-400">Day {getDaysInCurrentStage(cultivation)}</p>
-                      </div>
+
+                      {cultivation.isTracking && !isCompleted && (
+                        <div className="space-y-4 mt-auto">
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-500 mb-1.5 font-medium">
+                              <span>Progress</span>
+                              <span className="font-bold text-gray-900">{progress}%</span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-gray-100 shadow-inner">
+                              <div className="h-2 rounded-full bg-emerald-500 shadow-sm" style={{ width: `${progress}%` }}></div>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-end bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <div className="w-[70%]">
+                              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Stage</p>
+                              <p className="font-bold text-sm text-gray-800 truncate pr-2">{currentStage}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Day</p>
+                              <p className="font-extrabold text-lg text-emerald-700 leading-none">{daysInStage}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {cultivation.isTracking && isCompleted && (
+                        <div className="mt-auto rounded-xl bg-yellow-50 p-4 border border-yellow-100 text-center"><p className="text-sm font-extrabold text-yellow-800">🎉 Ready for Harvest</p></div>
+                      )}
+                      {!cultivation.isTracking && (
+                        <div className="mt-auto rounded-xl bg-blue-50 p-4 border border-blue-100 text-center"><p className="text-sm font-extrabold text-blue-800">Ready to start</p></div>
+                      )}
                     </div>
                   );
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-400 text-xs py-2 text-center">No active tracking</p>
-            )}
+                })
+              ) : (
+                <div className="w-full flex items-center justify-center h-full text-sm font-medium text-gray-400">
+                  No crops added yet.
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(246,249,247,0.98))] p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)]">
-            <h2 className="text-sm font-semibold text-gray-800 mb-3">Quick Actions</h2>
-            <div className="space-y-2">
-              {planningCultivations.length > 0 && (
-                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3">
-                  <p className="text-xs text-gray-700">
-                    <span className="font-medium text-blue-700">Planning:</span> {planningCultivations.length} ready to track
-                  </p>
-                </div>
-              )}
-              
-              {completedCultivations.length > 0 && (
-                <div className="rounded-2xl border border-yellow-100 bg-yellow-50 p-3">
-                  <p className="text-xs text-gray-700">
-                    <span className="font-medium text-yellow-700">Harvest:</span> {completedCultivations.length} crop(s) ready
-                  </p>
-                </div>
-              )}
+          {/* Right Side: Tracking Grid + Quick Actions */}
+          <div className="col-span-12 xl:col-span-4 flex flex-col gap-5 min-h-0">
+            
+            {/* Active Tracking Mini Grid */}
+            <div className="flex-1 flex flex-col bg-[linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(246,249,247,0.98))] rounded-[32px] border border-gray-200 p-5 shadow-sm min-h-0">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-800 mb-4 shrink-0">Active Timers</h2>
+              <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 flex flex-col gap-3">
+                {trackedCultivations.length > 0 ? (
+                  trackedCultivations.map((cultivation) => {
+                    const currentStage = getCurrentStage(cultivation);
+                    const isCompleted = cropSteps[cultivation._id] && (cultivation.currentStepIndex || 0) >= (cropSteps[cultivation._id]?.length || 0);
+                    if (isCompleted) return null;
 
-              {trackedCultivations.length === 0 && activeCultivations.length === 0 && (
-                <div className="rounded-2xl border border-green-100 bg-green-50 p-3">
-                  <p className="text-xs text-gray-700">
-                    <span className="font-medium text-green-700">Start:</span> Add your first crop
-                  </p>
-                </div>
-              )}
+                    let targetDate = new Date();
+                    const steps = cropSteps[cultivation._id];
+                    if (steps && steps.length > 0 && cultivation.currentStepStartDate) {
+                      const currentIndex = cultivation.currentStepIndex || 0;
+                      targetDate = new Date(cultivation.currentStepStartDate);
+                      targetDate.setDate(targetDate.getDate() + (steps[currentIndex]?.estimatedDays || 0));
+                    }
+
+                    return (
+                      <div key={cultivation._id} className="rounded-[20px] border border-gray-200 bg-white p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between shrink-0 gap-3 transition-transform hover:scale-[1.02]">
+                        <div className="w-full sm:w-1/2 pr-2 text-center sm:text-left">
+                          <h3 className="font-extrabold text-gray-900 text-base truncate">{cultivation.cropName}</h3>
+                          <p className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full mt-1.5 inline-block truncate max-w-full border border-emerald-100">
+                            {currentStage}
+                          </p>
+                        </div>
+                        <div className="w-full sm:w-1/2 sm:pl-3 sm:border-l border-gray-100 flex justify-center">
+                          <MiniDigitalCountdown targetDate={targetDate} />
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm font-medium text-gray-400">No active tracking at the moment</div>
+                )}
+              </div>
             </div>
 
-            <div className="mt-3 space-y-1.5">
-              <button
-                onClick={() => router.push('/navigation/farmer/cultivation')}
-                className="w-full rounded-2xl border border-green-200 py-2 text-xs font-medium text-green-600 transition-colors hover:bg-green-50 hover:text-green-700"
-              >
-                Find New Crops
-              </button>
-              <button
-                onClick={() => router.push('/navigation/farmer/cultivation/view')}
-                className="w-full rounded-2xl border border-gray-200 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-700"
-              >
-                Manage All
-              </button>
+            {/* Quick Actions Enlarged */}
+            <div className="shrink-0 bg-white rounded-[32px] border border-gray-200 p-5 shadow-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => router.push('/dashboard/farmer/cultivation')}
+                  className="rounded-2xl bg-emerald-50 border border-emerald-200 py-3 text-sm font-extrabold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-sm"
+                >
+                  + Add New Crop
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard/farmer/cultivation-view')}
+                  className="rounded-2xl bg-gray-50 border border-gray-200 py-3 text-sm font-extrabold text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
+                >
+                  Manage Profile
+                </button>
+              </div>
             </div>
+
           </div>
         </div>
       </main>
