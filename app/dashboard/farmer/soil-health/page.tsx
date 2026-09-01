@@ -130,6 +130,67 @@ const DISTRICTS = [
 
 const SEASONS = ['Maha', 'Yala', 'Inter-monsoon'];
 
+// Each district has its own field-location options for both soil-health flows.
+const FIELD_LOCATIONS_BY_DISTRICT: Record<string, string[]> = {
+  Ampara: ['Ampara Town', 'Akkaraipattu', 'Kalmunai'],
+  Anuradhapura: ['Kekirawa', 'Thalawa', 'Medawachchiya', 'Galenbindunuwewa'],
+  Badulla: ['Badulla Town', 'Mahiyanganaya', 'Passara'],
+  Batticaloa: ['Batticaloa Town', 'Kattankudy', 'Eravur'],
+  Colombo: ['Homagama', 'Kaduwela', 'Hanwella'],
+  Galle: ['Galle Town', 'Elpitiya', 'Karandeniya'],
+  Gampaha: ['Minuwangoda', 'Divulapitiya', 'Ja-Ela'],
+  Hambantota: ['Tissamaharama', 'Ambalantota', 'Tangalle', 'Sooriyawewa'],
+  Jaffna: ['Jaffna Town', 'Chavakachcheri', 'Point Pedro'],
+  Kalutara: ['Kalutara Town', 'Horana', 'Agalawatta'],
+  Kandy: ['Kandy Town', 'Gampola', 'Akurana'],
+  Kegalle: ['Kegalle Town', 'Mawanella', 'Rambukkana'],
+  Kilinochchi: ['Kilinochchi Town', 'Poonakary', 'Karachchi'],
+  Kurunegala: ['Kurunegala Town', 'Kuliyapitiya', 'Nikaweratiya'],
+  Mannar: ['Mannar Town', 'Murunkan', 'Nanattan'],
+  Matale: ['Matale Town', 'Dambulla', 'Galewela'],
+  Matara: ['Matara Town', 'Weligama', 'Akuressa'],
+  Moneragala: ['Moneragala Town', 'Wellawaya', 'Bibila'],
+  Mullaitivu: ['Mullaitivu Town', 'Oddusuddan', 'Puthukudiyiruppu'],
+  'Nuwara Eliya': ['Nuwara Eliya Town', 'Hatton', 'Hanguranketha'],
+  Polonnaruwa: ['Polonnaruwa Town', 'Hingurakgoda', 'Medirigiriya'],
+  Puttalam: ['Puttalam Town', 'Chilaw', 'Wennappuwa'],
+  Ratnapura: ['Ratnapura Town', 'Embilipitiya', 'Balangoda'],
+  Trincomalee: ['Trincomalee Town', 'Kinniya', 'Kantale'],
+  Vavuniya: ['Vavuniya Town', 'Cheddikulam', 'Vengalacheddikulam']
+};
+
+const CROP_TYPES = ['Banana', 'Maize', 'Pumpkin', 'Tomato', 'Chili', 'Onion', 'Potato', 'Brinjal'];
+
+const fieldLocationLabels: Record<LanguageOption, Record<string, string>> = {
+  English: {},
+  Sinhala: {
+    Kekirawa: 'කැකිරාව',
+    Tissamaharama: 'තිස්සමහාරාම',
+    Ambalantota: 'අම්බලන්තොට',
+    Thalawa: 'තලාව',
+    Medawachchiya: 'මැදවච්චිය',
+    Galenbindunuwewa: 'ගලෙන්බිඳුණුවැව',
+    Hingurakgoda: 'හිඟුරක්ගොඩ',
+    Mahiyanganaya: 'මහියංගනය',
+    Wellawaya: 'වැල්ලවාය',
+    Embilipitiya: 'ඇඹිලිපිටිය'
+  }
+};
+
+const cropTypeLabels: Record<LanguageOption, Record<string, string>> = {
+  English: Object.fromEntries(CROP_TYPES.map((crop) => [crop, crop])),
+  Sinhala: {
+    Banana: 'කෙසෙල්',
+    Maize: 'බඩඉරිඟු',
+    Pumpkin: 'වට්ටක්කා',
+    Tomato: 'තක්කාලි',
+    Chili: 'මිරිස්',
+    Onion: 'ලූනු',
+    Potato: 'අර්තාපල්',
+    Brinjal: 'වම්බටු'
+  }
+};
+
 const districtLabels: Record<LanguageOption, Record<string, string>> = {
   English: {
     Ampara: 'Ampara',
@@ -237,7 +298,7 @@ const uiText = {
     season: 'Season',
     language: 'Language',
     fieldLocation: 'Field location',
-    fieldLocationPlaceholder: 'Village or field name',
+    fieldLocationPlaceholder: 'Select a village or field location',
     visitAddress: 'Visit address',
     visitAddressPlaceholder: 'House number, road, village, and any landmarks',
     visitAddressHint: 'If your farmer profile already has an address, we will use it automatically. You can still replace it here for this request.',
@@ -257,7 +318,7 @@ const uiText = {
     confirmDeleteTitle: 'Delete item?',
     confirmClearTitle: 'Clear all items?',
     cropType: 'Crop type',
-    cropTypePlaceholder: 'pumpkin, maize, banana...',
+    cropTypePlaceholder: 'Select a crop type',
     landSize: 'Land size (acres)',
     preferredVisitDate: 'Preferred visit date',
     soilPhoto: 'Soil photo',
@@ -369,7 +430,7 @@ const uiText = {
     season: 'වාරය',
     language: 'භාෂාව',
     fieldLocation: 'ඉඩමේ ස්ථානය',
-    fieldLocationPlaceholder: 'ගම හෝ ඉඩමේ නම',
+    fieldLocationPlaceholder: 'ගම හෝ ඉඩමේ ස්ථානය තෝරන්න',
     visitAddress: 'සංචාර ලිපිනය',
     visitAddressPlaceholder: 'ගෙදර අංකය, පාර, ගම සහ හඳුනාගැනීමට උපකාරී ලකුණු',
     visitAddressHint: 'ඔබගේ farmer profile එකේ address එක තිබ්බොත් ඒක auto use කරනවා. ඕන නම් මේ request එකට වෙනම address එකක් මෙතන දාන්නත් පුළුවන්.',
@@ -389,7 +450,7 @@ const uiText = {
     confirmDeleteTitle: 'item එක මකන්නද?',
     confirmClearTitle: 'සියල්ල මකන්නද?',
     cropType: 'වගා වර්ගය',
-    cropTypePlaceholder: 'වී, බඩඉරිඟු, කෙසෙල්...',
+    cropTypePlaceholder: 'වගා වර්ගයක් තෝරන්න',
     landSize: 'ඉඩම් ප්‍රමාණය (අක්කර)',
     preferredVisitDate: 'අවශ්‍ය සංචාර දිනය',
     soilPhoto: 'පස් ඡායාරූපය',
@@ -1707,7 +1768,7 @@ export default function SoilHealthPage() {
                     <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
                     <select
                       value={form.district}
-                      onChange={(e) => setForm((current) => ({ ...current, district: e.target.value }))}
+                      onChange={(e) => setForm((current) => ({ ...current, district: e.target.value, location: '' }))}
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                     >
                       {DISTRICTS.map((district) => (
@@ -1733,21 +1794,33 @@ export default function SoilHealthPage() {
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
-                    <input
+                    <select
                       value={form.location}
                       onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))}
-                      placeholder={t.fieldLocationPlaceholder}
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    />
+                    >
+                      <option value="" disabled>{t.fieldLocationPlaceholder}</option>
+                      {(FIELD_LOCATIONS_BY_DISTRICT[form.district] ?? []).map((location) => (
+                        <option key={location} value={location}>
+                          {fieldLocationLabels[form.language][location] ?? location}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
-                    <input
+                    <select
                       value={form.cropType}
                       onChange={(e) => setForm((current) => ({ ...current, cropType: e.target.value }))}
-                      placeholder={t.cropTypePlaceholder}
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    />
+                    >
+                      <option value="" disabled>{t.cropTypePlaceholder}</option>
+                      {CROP_TYPES.map((cropType) => (
+                        <option key={cropType} value={cropType}>
+                          {cropTypeLabels[form.language][cropType]}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   {mode === 'request' && (
                     <div className="md:col-span-2">
@@ -2323,7 +2396,7 @@ export default function SoilHealthPage() {
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
                         <select
                           value={requestDraft.district}
-                          onChange={(event) => setRequestDraft((current) => ({ ...current, district: event.target.value }))}
+                          onChange={(event) => setRequestDraft((current) => ({ ...current, district: event.target.value, location: '' }))}
                           className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                         >
                           {DISTRICTS.map((district) => (
@@ -2335,11 +2408,18 @@ export default function SoilHealthPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
-                        <input
+                        <select
                           value={requestDraft.location}
                           onChange={(event) => setRequestDraft((current) => ({ ...current, location: event.target.value }))}
                           className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        />
+                        >
+                          <option value="" disabled>{t.fieldLocationPlaceholder}</option>
+                          {(FIELD_LOCATIONS_BY_DISTRICT[requestDraft.district] ?? []).map((location) => (
+                            <option key={location} value={location}>
+                              {fieldLocationLabels[form.language][location] ?? location}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.visitAddress}</label>
@@ -2353,11 +2433,18 @@ export default function SoilHealthPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
-                        <input
+                        <select
                           value={requestDraft.cropType}
                           onChange={(event) => setRequestDraft((current) => ({ ...current, cropType: event.target.value }))}
                           className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        />
+                        >
+                          <option value="" disabled>{t.cropTypePlaceholder}</option>
+                          {CROP_TYPES.map((cropType) => (
+                            <option key={cropType} value={cropType}>
+                              {cropTypeLabels[form.language][cropType]}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div>
