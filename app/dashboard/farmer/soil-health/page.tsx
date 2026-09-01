@@ -162,6 +162,17 @@ const FIELD_LOCATIONS_BY_DISTRICT: Record<string, string[]> = {
 
 const CROP_TYPES = ['Banana', 'Maize', 'Pumpkin', 'Tomato', 'Chili', 'Onion', 'Potato', 'Brinjal'];
 
+const cropVisuals: Record<string, string> = {
+  Banana: '🍌',
+  Maize: '🌽',
+  Pumpkin: '🎃',
+  Tomato: '🍅',
+  Chili: '🌶️',
+  Onion: '🧅',
+  Potato: '🥔',
+  Brinjal: '🍆'
+};
+
 const fieldLocationLabels: Record<LanguageOption, Record<string, string>> = {
   English: {},
   Sinhala: {
@@ -307,6 +318,9 @@ const uiText = {
     requestModeHelper: 'Ask an officer to visit and collect sensor readings.',
     selectedForCheck: 'Selected for this check',
     liveImagePreview: 'Live image preview',
+    selectedCrop: 'Selected crop',
+    cropReadyHint: 'This crop will be used when preparing your soil guidance.',
+    fieldSnapshot: 'Your field snapshot',
     quickMode: 'Quick Image Check',
     requestMode: 'Request Sensor Visit',
     district: 'District',
@@ -453,6 +467,9 @@ const uiText = {
     requestModeHelper: 'Sensor readings ලබාගැනීමට නිලධාරියෙකුගේ සංචාරයක් ඉල්ලන්න.',
     selectedForCheck: 'මෙම පරීක්ෂාව සඳහා තෝරාගෙන ඇත',
     liveImagePreview: 'සජීවී ඡායාරූප පෙරදසුන',
+    selectedCrop: 'තෝරාගත් වගාව',
+    cropReadyHint: 'ඔබේ පස් මඟපෙන්වීම සකස් කිරීමේදී මෙම වගාව භාවිතා වේ.',
+    fieldSnapshot: 'ඔබේ ඉඩමේ සාරාංශය',
     quickMode: 'ඉක්මන් ඡායාරූප පරීක්ෂාව',
     requestMode: 'සංවේදක සංචාරයක් ඉල්ලන්න',
     district: 'දිස්ත්‍රික්කය',
@@ -1827,8 +1844,9 @@ export default function SoilHealthPage() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
+                    <label htmlFor="soil-district" className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
                     <select
+                      id="soil-district"
                       value={form.district}
                       onChange={(e) => setForm((current) => ({ ...current, district: e.target.value, location: '' }))}
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
@@ -1841,8 +1859,9 @@ export default function SoilHealthPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.season}</label>
+                    <label htmlFor="soil-season" className="mb-1 block text-sm font-medium text-stone-700">{t.season}</label>
                     <select
+                      id="soil-season"
                       value={form.season}
                       onChange={(e) => setForm((current) => ({ ...current, season: e.target.value }))}
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
@@ -1855,8 +1874,9 @@ export default function SoilHealthPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
+                    <label htmlFor="soil-location" className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
                     <select
+                      id="soil-location"
                       value={form.location}
                       onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))}
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
@@ -1870,8 +1890,9 @@ export default function SoilHealthPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
+                    <label htmlFor="soil-crop-type" className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
                     <select
+                      id="soil-crop-type"
                       value={form.cropType}
                       onChange={(e) => setForm((current) => ({ ...current, cropType: e.target.value }))}
                       className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
@@ -1883,6 +1904,18 @@ export default function SoilHealthPage() {
                         </option>
                       ))}
                     </select>
+                    {form.cropType && (
+                      <div className={`${styles.cropPreview} mt-3 flex items-center gap-3 rounded-2xl border border-emerald-100 px-3 py-3`}>
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow-sm" aria-hidden="true">
+                          {cropVisuals[form.cropType]}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">{t.selectedCrop}</p>
+                          <p className="mt-0.5 truncate text-sm font-bold text-stone-900">{cropTypeLabels[form.language][form.cropType]}</p>
+                          <p className="mt-0.5 text-xs leading-4 text-stone-600">{t.cropReadyHint}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {mode === 'request' && (
                     <div className="md:col-span-2">
@@ -1908,8 +1941,9 @@ export default function SoilHealthPage() {
                     </div>
                   )}
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>
+                    <label htmlFor="soil-land-size" className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>
                     <input
+                      id="soil-land-size"
                       type="number"
                       min="0.25"
                       step="0.25"
@@ -1931,13 +1965,24 @@ export default function SoilHealthPage() {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-stone-100 bg-stone-50/80 px-4 py-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">{t.selectedForCheck}</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-                    <span className="rounded-full bg-white px-3 py-1.5 text-emerald-800 shadow-sm">{getDistrictLabel(form.district, form.language)}</span>
-                    {form.location && <span className="rounded-full bg-white px-3 py-1.5 text-emerald-800 shadow-sm">{fieldLocationLabels[form.language][form.location] ?? form.location}</span>}
-                    {form.cropType && <span className="rounded-full bg-white px-3 py-1.5 text-emerald-800 shadow-sm">{cropTypeLabels[form.language][form.cropType]}</span>}
-                    <span className="rounded-full bg-white px-3 py-1.5 text-stone-600 shadow-sm">{getSeasonLabel(form.season, form.language)}</span>
+                <div className={`${styles.fieldSnapshot} rounded-2xl border border-emerald-100 px-4 py-3`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">{t.fieldSnapshot}</p>
+                      <p className="mt-1 text-sm font-bold text-stone-900">
+                        {form.location ? `${fieldLocationLabels[form.language][form.location] ?? form.location}, ` : ''}{getDistrictLabel(form.district, form.language)}
+                      </p>
+                    </div>
+                    {form.cropType && (
+                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm" aria-label={cropTypeLabels[form.language][form.cropType]}>
+                        {cropVisuals[form.cropType]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                    <span className="rounded-full bg-white/90 px-3 py-1.5 text-emerald-800 shadow-sm">{t.selectedForCheck}</span>
+                    {form.cropType && <span className="rounded-full bg-white/90 px-3 py-1.5 text-emerald-800 shadow-sm">{cropTypeLabels[form.language][form.cropType]}</span>}
+                    <span className="rounded-full bg-white/90 px-3 py-1.5 text-stone-600 shadow-sm">{getSeasonLabel(form.season, form.language)}</span>
                   </div>
                 </div>
 
@@ -1998,10 +2043,11 @@ export default function SoilHealthPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-semibold text-stone-800">
+                  <label htmlFor="soil-farmer-notes" className="mb-1 block text-sm font-semibold text-stone-800">
                     {mode === 'request' ? t.requestNote : t.optionalNote}
                   </label>
                   <textarea
+                    id="soil-farmer-notes"
                     value={form.farmerNotes}
                     onChange={(e) => setForm((current) => ({ ...current, farmerNotes: e.target.value }))}
                     rows={3}

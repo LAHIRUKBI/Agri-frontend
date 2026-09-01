@@ -83,6 +83,30 @@
   background-size: 20px 20px, auto;
 }
 
+.cropPreview {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(250, 204, 21, 0.34), transparent 5rem),
+    linear-gradient(135deg, #f0fdf4, #fffbeb);
+}
+
+.cropPreview::after {
+  position: absolute;
+  top: -1.2rem;
+  right: 0.5rem;
+  color: rgba(6, 95, 70, 0.08);
+  font-size: 5.5rem;
+  line-height: 1;
+  content: '✦';
+}
+
+.fieldSnapshot {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f0fdfa, #ecfdf5 50%, #f7fee7);
+}
+
 .pulseDot {
   animation: pulse 2s ease-in-out infinite;
 }
