@@ -1,7 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CalendarDaysIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import FarmerSidebar from '@/app/navigation/farmer/page';
+import {
+  SRI_LANKA_DISTRICT_REGIONS,
+  SRI_LANKA_ISLAND_OUTLINE,
+  SRI_LANKA_MAP_VIEW_BOX,
+} from '../prediction/components/sell-advisor/districtMapRegions';
+import styles from './soil-health.module.css';
 
 type Mode = 'quick' | 'request';
 type LanguageOption = 'English' | 'Sinhala';
@@ -130,6 +137,78 @@ const DISTRICTS = [
 
 const SEASONS = ['Maha', 'Yala', 'Inter-monsoon'];
 
+// Each district has its own field-location options for both soil-health flows.
+const FIELD_LOCATIONS_BY_DISTRICT: Record<string, string[]> = {
+  Ampara: ['Ampara Town', 'Akkaraipattu', 'Kalmunai'],
+  Anuradhapura: ['Kekirawa', 'Thalawa', 'Medawachchiya', 'Galenbindunuwewa'],
+  Badulla: ['Badulla Town', 'Mahiyanganaya', 'Passara'],
+  Batticaloa: ['Batticaloa Town', 'Kattankudy', 'Eravur'],
+  Colombo: ['Homagama', 'Kaduwela', 'Hanwella'],
+  Galle: ['Galle Town', 'Elpitiya', 'Karandeniya'],
+  Gampaha: ['Minuwangoda', 'Divulapitiya', 'Ja-Ela'],
+  Hambantota: ['Tissamaharama', 'Ambalantota', 'Tangalle', 'Sooriyawewa'],
+  Jaffna: ['Jaffna Town', 'Chavakachcheri', 'Point Pedro'],
+  Kalutara: ['Kalutara Town', 'Horana', 'Agalawatta'],
+  Kandy: ['Kandy Town', 'Gampola', 'Akurana'],
+  Kegalle: ['Kegalle Town', 'Mawanella', 'Rambukkana'],
+  Kilinochchi: ['Kilinochchi Town', 'Poonakary', 'Karachchi'],
+  Kurunegala: ['Kurunegala Town', 'Kuliyapitiya', 'Nikaweratiya'],
+  Mannar: ['Mannar Town', 'Murunkan', 'Nanattan'],
+  Matale: ['Matale Town', 'Dambulla', 'Galewela'],
+  Matara: ['Matara Town', 'Weligama', 'Akuressa'],
+  Moneragala: ['Moneragala Town', 'Wellawaya', 'Bibila'],
+  Mullaitivu: ['Mullaitivu Town', 'Oddusuddan', 'Puthukudiyiruppu'],
+  'Nuwara Eliya': ['Nuwara Eliya Town', 'Hatton', 'Hanguranketha'],
+  Polonnaruwa: ['Polonnaruwa Town', 'Hingurakgoda', 'Medirigiriya'],
+  Puttalam: ['Puttalam Town', 'Chilaw', 'Wennappuwa'],
+  Ratnapura: ['Ratnapura Town', 'Embilipitiya', 'Balangoda'],
+  Trincomalee: ['Trincomalee Town', 'Kinniya', 'Kantale'],
+  Vavuniya: ['Vavuniya Town', 'Cheddikulam', 'Vengalacheddikulam']
+};
+
+const CROP_TYPES = ['Banana', 'Maize', 'Pumpkin', 'Tomato', 'Chili', 'Onion', 'Potato', 'Brinjal'];
+
+const cropVisuals: Record<string, string> = {
+  Banana: '🍌',
+  Maize: '🌽',
+  Pumpkin: '🎃',
+  Tomato: '🍅',
+  Chili: '🌶️',
+  Onion: '🧅',
+  Potato: '🥔',
+  Brinjal: '🍆'
+};
+
+const fieldLocationLabels: Record<LanguageOption, Record<string, string>> = {
+  English: {},
+  Sinhala: {
+    Kekirawa: 'කැකිරාව',
+    Tissamaharama: 'තිස්සමහාරාම',
+    Ambalantota: 'අම්බලන්තොට',
+    Thalawa: 'තලාව',
+    Medawachchiya: 'මැදවච්චිය',
+    Galenbindunuwewa: 'ගලෙන්බිඳුණුවැව',
+    Hingurakgoda: 'හිඟුරක්ගොඩ',
+    Mahiyanganaya: 'මහියංගනය',
+    Wellawaya: 'වැල්ලවාය',
+    Embilipitiya: 'ඇඹිලිපිටිය'
+  }
+};
+
+const cropTypeLabels: Record<LanguageOption, Record<string, string>> = {
+  English: Object.fromEntries(CROP_TYPES.map((crop) => [crop, crop])),
+  Sinhala: {
+    Banana: 'කෙසෙල්',
+    Maize: 'බඩඉරිඟු',
+    Pumpkin: 'වට්ටක්කා',
+    Tomato: 'තක්කාලි',
+    Chili: 'මිරිස්',
+    Onion: 'ලූනු',
+    Potato: 'අර්තාපල්',
+    Brinjal: 'වම්බටු'
+  }
+};
+
 const districtLabels: Record<LanguageOption, Record<string, string>> = {
   English: {
     Ampara: 'Ampara',
@@ -231,13 +310,37 @@ const uiText = {
       'Use a soil photo for an instant estimation now, or request a field officer visit for the full fusion result later.',
     workflowTitle: 'Current workflow',
     workflowText: 'Photo upload -> image analysis -> quick score or sensor request',
+    stepDetails: '1. Field details',
+    stepPhoto: '2. Soil photo',
+    stepResult: '3. Get guidance',
+    formTitle: 'Start your soil check',
+    quickDescription: 'Get an instant image-based soil estimate.',
+    requestDescription: 'Request a field officer for sensor readings and review.',
+    photoReadyToAnalyse: 'Photo ready to analyse',
+    noPhotoSelected: 'No photo selected yet',
+    preparationProgress: 'Preparation progress',
+    detailsReady: 'details ready',
+    quickModeHelper: 'Upload a soil photo and receive an instant estimate.',
+    requestModeHelper: 'Ask an officer to visit and collect sensor readings.',
+    selectedForCheck: 'Selected for this check',
+    liveImagePreview: 'Live image preview',
+    selectedCrop: 'Selected crop',
+    cropReadyHint: 'This crop will be used when preparing your soil guidance.',
+    fieldSnapshot: 'Your field snapshot',
+    changeSelection: 'Tap to change',
+    chooseDistrict: 'Choose your district',
+    chooseLocation: 'Choose a field location',
+    chooseSeason: 'Choose the growing season',
+    chooseCrop: 'Choose the crop you are growing',
+    chooseLandSize: 'Choose your land area',
+    customLandSize: 'Custom acres',
     quickMode: 'Quick Image Check',
     requestMode: 'Request Sensor Visit',
     district: 'District',
     season: 'Season',
     language: 'Language',
     fieldLocation: 'Field location',
-    fieldLocationPlaceholder: 'Village or field name',
+    fieldLocationPlaceholder: 'Select a village or field location',
     visitAddress: 'Visit address',
     visitAddressPlaceholder: 'House number, road, village, and any landmarks',
     visitAddressHint: 'If your farmer profile already has an address, we will use it automatically. You can still replace it here for this request.',
@@ -257,7 +360,7 @@ const uiText = {
     confirmDeleteTitle: 'Delete item?',
     confirmClearTitle: 'Clear all items?',
     cropType: 'Crop type',
-    cropTypePlaceholder: 'pumpkin, maize, banana...',
+    cropTypePlaceholder: 'Select a crop type',
     landSize: 'Land size (acres)',
     preferredVisitDate: 'Preferred visit date',
     soilPhoto: 'Soil photo',
@@ -363,13 +466,37 @@ const uiText = {
       'දැන්ම පසේ ඡායාරූපයක් භාවිතා කර ඉක්මන් ඇස්තමේන්තුවක් ලබාගන්න, නැත්නම් පසුව පූර්ණ විශ්ලේෂණය සඳහා ක්ෂේත්‍ර නිලධාරී සංචාරයක් ඉල්ලන්න.',
     workflowTitle: 'දැනට ක්‍රියාදාමය',
     workflowText: 'ඡායාරූපය upload කිරීම -> image analysis -> quick score හෝ sensor request',
+    stepDetails: '1. ඉඩම් විස්තර',
+    stepPhoto: '2. පස් ඡායාරූපය',
+    stepResult: '3. මඟපෙන්වීම ලබාගන්න',
+    formTitle: 'ඔබගේ පස් පරීක්ෂාව ආරම්භ කරන්න',
+    quickDescription: 'ඡායාරූපය මත පදනම් වූ ඉක්මන් පස් ඇස්තමේන්තුවක් ලබාගන්න.',
+    requestDescription: 'Sensor readings සහ පරීක්ෂාව සඳහා field officer කෙනෙක් ඉල්ලන්න.',
+    photoReadyToAnalyse: 'ඡායාරූපය analysis සඳහා සූදානම්',
+    noPhotoSelected: 'තවම ඡායාරූපයක් තෝරා නැහැ',
+    preparationProgress: 'සූදානම් වීමේ ප්‍රගතිය',
+    detailsReady: 'විස්තර සූදානම්',
+    quickModeHelper: 'පස් photo එකක් upload කර ඉක්මන් ඇස්තමේන්තුවක් ලබාගන්න.',
+    requestModeHelper: 'Sensor readings ලබාගැනීමට නිලධාරියෙකුගේ සංචාරයක් ඉල්ලන්න.',
+    selectedForCheck: 'මෙම පරීක්ෂාව සඳහා තෝරාගෙන ඇත',
+    liveImagePreview: 'සජීවී ඡායාරූප පෙරදසුන',
+    selectedCrop: 'තෝරාගත් වගාව',
+    cropReadyHint: 'ඔබේ පස් මඟපෙන්වීම සකස් කිරීමේදී මෙම වගාව භාවිතා වේ.',
+    fieldSnapshot: 'ඔබේ ඉඩමේ සාරාංශය',
+    changeSelection: 'වෙනස් කිරීමට තට්ටු කරන්න',
+    chooseDistrict: 'ඔබේ දිස්ත්‍රික්කය තෝරන්න',
+    chooseLocation: 'ඉඩමේ ස්ථානය තෝරන්න',
+    chooseSeason: 'වගා වාරය තෝරන්න',
+    chooseCrop: 'ඔබ වගා කරන බෝගය තෝරන්න',
+    chooseLandSize: 'ඔබේ ඉඩම් ප්‍රමාණය තෝරන්න',
+    customLandSize: 'වෙනත් අක්කර ප්‍රමාණයක්',
     quickMode: 'ඉක්මන් ඡායාරූප පරීක්ෂාව',
     requestMode: 'සංවේදක සංචාරයක් ඉල්ලන්න',
     district: 'දිස්ත්‍රික්කය',
     season: 'වාරය',
     language: 'භාෂාව',
     fieldLocation: 'ඉඩමේ ස්ථානය',
-    fieldLocationPlaceholder: 'ගම හෝ ඉඩමේ නම',
+    fieldLocationPlaceholder: 'ගම හෝ ඉඩමේ ස්ථානය තෝරන්න',
     visitAddress: 'සංචාර ලිපිනය',
     visitAddressPlaceholder: 'ගෙදර අංකය, පාර, ගම සහ හඳුනාගැනීමට උපකාරී ලකුණු',
     visitAddressHint: 'ඔබගේ farmer profile එකේ address එක තිබ්බොත් ඒක auto use කරනවා. ඕන නම් මේ request එකට වෙනම address එකක් මෙතන දාන්නත් පුළුවන්.',
@@ -389,7 +516,7 @@ const uiText = {
     confirmDeleteTitle: 'item එක මකන්නද?',
     confirmClearTitle: 'සියල්ල මකන්නද?',
     cropType: 'වගා වර්ගය',
-    cropTypePlaceholder: 'වී, බඩඉරිඟු, කෙසෙල්...',
+    cropTypePlaceholder: 'වගා වර්ගයක් තෝරන්න',
     landSize: 'ඉඩම් ප්‍රමාණය (අක්කර)',
     preferredVisitDate: 'අවශ්‍ය සංචාර දිනය',
     soilPhoto: 'පස් ඡායාරූපය',
@@ -836,6 +963,7 @@ export default function SoilHealthPage() {
   const [isPreviewScrolling, setIsPreviewScrolling] = useState(false);
   const [isRequestPreviewScrolling, setIsRequestPreviewScrolling] = useState(false);
   const [popup, setPopup] = useState<PopupState | null>(null);
+  const [districtPickerOpen, setDistrictPickerOpen] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
@@ -845,6 +973,8 @@ export default function SoilHealthPage() {
     () => requests.filter((request) => matchesRequestFilter(request.status, requestFilter)),
     [requestFilter, requests]
   );
+  const completedPreparationSteps = [form.district, form.location, form.cropType, imageDataUrl].filter(Boolean).length;
+  const preparationProgress = Math.round((completedPreparationSteps / 4) * 100);
 
   const loadData = useCallback(async () => {
     if (!token) {
@@ -1636,27 +1766,27 @@ export default function SoilHealthPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-stone-50">
+    <div className="flex min-h-screen bg-[#f4f7f2]">
       <FarmerSidebar user={user} />
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <main className={`${styles.workspace} flex-1 overflow-y-auto p-4 md:p-6 lg:p-8`}>
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-3xl border border-stone-200 bg-[radial-gradient(circle_at_top_left,_#f7fee7,_#fafaf9_55%)] p-6 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <section className={`${styles.hero} overflow-hidden rounded-[2rem] border border-emerald-950 bg-[radial-gradient(circle_at_84%_18%,_rgba(163,230,53,0.26),_transparent_25%),linear-gradient(120deg,_#063a2c,_#0a5a42_58%,_#0d6b4b)] p-6 shadow-xl shadow-emerald-950/10 md:p-8`}>
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">{t.moduleTag}</p>
-                <h1 className="mt-2 text-3xl font-bold text-stone-900">{t.title}</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">{t.subtitle}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-lime-300">{t.moduleTag}</p>
+                <h1 className="mt-3 max-w-3xl text-3xl font-bold leading-tight text-white md:text-4xl">{t.title}</h1>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-emerald-50/85 md:text-base">{t.subtitle}</p>
               </div>
               <div className="flex flex-col items-start gap-3 md:items-end">
-                <div className="rounded-full border border-stone-200 bg-white p-1 shadow-sm">
+                <div className="rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-sm">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setForm((current) => ({ ...current, language: 'English' }))}
                       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                         form.language === 'English'
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-stone-600 hover:bg-stone-100'
+                          ? 'bg-white text-emerald-950 shadow-sm'
+                          : 'text-emerald-50 hover:bg-white/10'
                       }`}
                     >
                       English
@@ -1666,98 +1796,310 @@ export default function SoilHealthPage() {
                       onClick={() => setForm((current) => ({ ...current, language: 'Sinhala' }))}
                       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                         form.language === 'Sinhala'
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-stone-600 hover:bg-stone-100'
+                          ? 'bg-white text-emerald-950 shadow-sm'
+                          : 'text-emerald-50 hover:bg-white/10'
                       }`}
                     >
                       සිංහල
                     </button>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-emerald-200 bg-white/80 px-4 py-3 text-sm text-stone-600">
-                  <p className="font-semibold text-stone-800">{t.workflowTitle}</p>
-                  <p>{t.workflowText}</p>
+                <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-black/10 px-4 py-3 text-sm text-emerald-50/90 backdrop-blur-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-white">{t.preparationProgress}</p>
+                    <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-lime-200">
+                      {completedPreparationSteps}/4
+                    </span>
+                  </div>
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={preparationProgress}>
+                    <div className="h-full rounded-full bg-lime-300 transition-all duration-500" style={{ width: `${preparationProgress}%` }} />
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-emerald-50/75">{t.workflowText}</p>
                 </div>
               </div>
+            </div>
+            <div className="mt-7 grid gap-2 sm:grid-cols-3">
+              {[t.stepDetails, t.stepPhoto, t.stepResult].map((step, index) => (
+                <div key={step} className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${index === 0 ? 'border-lime-300 bg-lime-300 text-emerald-950' : 'border-white/15 bg-white/10 text-white'}`}>
+                  {step}
+                </div>
+              ))}
             </div>
           </section>
 
           <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
-            <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMode('quick')}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${mode === 'quick' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-stone-300 text-stone-700 hover:border-emerald-300 hover:text-emerald-700'}`}
-                >
-                  {t.quickMode}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('request')}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${mode === 'request' ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 text-stone-700 hover:border-amber-300 hover:text-amber-700'}`}
-                >
-                  {t.requestMode}
-                </button>
+            <section className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm md:p-6">
+              <div className="border-b border-stone-100 pb-5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{t.stepDetails}</p>
+                  <h2 className="mt-1 text-xl font-bold text-stone-900">{t.formTitle}</h2>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    data-step="01"
+                    onClick={() => setMode('quick')}
+                    className={`${styles.modeOption} ${mode === 'quick' ? `${styles.modeOptionActive} border-emerald-600 bg-emerald-700 text-white` : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-emerald-300 hover:bg-emerald-50'} rounded-2xl border p-4 text-left transition`}
+                  >
+                    <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-black ${mode === 'quick' ? 'bg-lime-300 text-emerald-950' : 'bg-emerald-100 text-emerald-700'}`}>01</span>
+                    <span className="mt-3 block text-sm font-bold">{t.quickMode}</span>
+                    <span className={`mt-1 block max-w-[15rem] text-xs leading-5 ${mode === 'quick' ? 'text-emerald-50/85' : 'text-stone-500'}`}>{t.quickModeHelper}</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-step="02"
+                    onClick={() => setMode('request')}
+                    className={`${styles.modeOption} ${mode === 'request' ? 'border-amber-500 bg-amber-500 text-white shadow-lg shadow-amber-950/15' : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-amber-300 hover:bg-amber-50'} rounded-2xl border p-4 text-left transition`}
+                  >
+                    <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-black ${mode === 'request' ? 'bg-amber-100 text-amber-800' : 'bg-amber-100 text-amber-700'}`}>02</span>
+                    <span className="mt-3 block text-sm font-bold">{t.requestMode}</span>
+                    <span className={`mt-1 block max-w-[15rem] text-xs leading-5 ${mode === 'request' ? 'text-amber-50/90' : 'text-stone-500'}`}>{t.requestModeHelper}</span>
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${mode === 'quick' ? 'border-emerald-100 bg-emerald-50 text-emerald-900' : 'border-amber-100 bg-amber-50 text-amber-900'}`}>
+                  <span className={`${styles.pulseDot} h-2.5 w-2.5 shrink-0 rounded-full ${mode === 'quick' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                  {mode === 'quick' ? t.quickDescription : t.requestDescription}
+                </div>
+                <div className="space-y-5">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
-                    <select
-                      value={form.district}
-                      onChange={(e) => setForm((current) => ({ ...current, district: e.target.value }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    >
-                      {DISTRICTS.map((district) => (
-                        <option key={district} value={district}>
-                          {getDistrictLabel(district, form.language)}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="rounded-3xl border border-emerald-100 bg-[linear-gradient(135deg,_#f0fdf4,_#ecfdf5)] p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">{t.district}</p>
+                      <button
+                        type="button"
+                        onClick={() => setDistrictPickerOpen((current) => !current)}
+                        className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md"
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white"><MapPinIcon className="h-5 w-5" /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-stone-900">{getDistrictLabel(form.district, form.language)}</span>
+                          <span className="mt-0.5 block text-xs text-stone-500">{t.changeSelection}</span>
+                        </span>
+                        <span className="text-lg font-bold text-emerald-700">{districtPickerOpen ? '−' : '+'}</span>
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.season}</label>
-                    <select
-                      value={form.season}
-                      onChange={(e) => setForm((current) => ({ ...current, season: e.target.value }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    >
-                      {SEASONS.map((season) => (
-                        <option key={season} value={season}>
-                          {getSeasonLabel(season, form.language)}
-                        </option>
-                      ))}
-                    </select>
+
+                  {districtPickerOpen && (
+                    <div className="rounded-[2rem] border border-slate-200 bg-slate-50/80 p-3 shadow-sm md:p-4">
+                      <div className="grid gap-4 md:grid-cols-[0.82fr_1.18fr]">
+                        <section className="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-emerald-50/70 p-3 shadow-sm sm:p-4" aria-label="Sri Lanka district map">
+                          <div className="relative text-center">
+                            <p className="text-base font-bold text-stone-950">{t.chooseDistrict}</p>
+                            <p className="mt-1 text-xs font-medium text-slate-500">Tap a district on the map to update your field locations.</p>
+                          </div>
+                          <svg
+                            viewBox={SRI_LANKA_MAP_VIEW_BOX}
+                            className="mx-auto h-[27rem] w-full max-w-[22rem]"
+                            preserveAspectRatio="xMidYMid meet"
+                            role="group"
+                            aria-label="Interactive map of Sri Lankan districts"
+                          >
+                            <path
+                              d={SRI_LANKA_ISLAND_OUTLINE}
+                              className="fill-slate-100 stroke-slate-300"
+                              strokeWidth="2"
+                              aria-hidden="true"
+                            />
+                            {SRI_LANKA_DISTRICT_REGIONS.map((region) => {
+                              const district = region.label;
+                              const selected = district === form.district;
+                              return (
+                                <path
+                                  key={region.id}
+                                  d={region.path}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Select ${getDistrictLabel(district, form.language)} district`}
+                                  aria-pressed={selected}
+                                  onClick={() => {
+                                    setForm((current) => ({ ...current, district, location: '' }));
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                                    event.preventDefault();
+                                    setForm((current) => ({ ...current, district, location: '' }));
+                                  }}
+                                  className={selected
+                                    ? 'cursor-pointer fill-emerald-500 stroke-emerald-800 stroke-[3] outline-none'
+                                    : 'cursor-pointer fill-emerald-100 stroke-white stroke-2 outline-none transition-colors duration-150 hover:fill-emerald-200 focus-visible:fill-emerald-200 focus-visible:stroke-emerald-700 focus-visible:stroke-[3]'}
+                                >
+                                  <title>{getDistrictLabel(district, form.language)}</title>
+                                </path>
+                              );
+                            })}
+                            <path
+                              d={SRI_LANKA_ISLAND_OUTLINE}
+                              className="pointer-events-none fill-none stroke-slate-400"
+                              strokeWidth="2"
+                              aria-hidden="true"
+                            />
+                          </svg>
+                          <div className="flex items-center justify-center gap-4 text-[0.68rem] font-semibold text-slate-600">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="size-2.5 rounded-sm border border-emerald-700 bg-emerald-500" aria-hidden="true" />
+                              Selected district
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="size-2.5 rounded-sm border border-emerald-300 bg-emerald-100" aria-hidden="true" />
+                              Available district
+                            </span>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-white bg-white/95 px-3 py-2 shadow-sm" aria-live="polite">
+                            <span className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-emerald-700">Map selection</span>
+                            <span className="text-sm font-bold text-stone-950">{getDistrictLabel(form.district, form.language)}</span>
+                          </div>
+                        </section>
+                        <section className="rounded-[1.75rem] border border-slate-200 bg-white p-4 sm:p-5" aria-label="District quick selection">
+                          <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-xl font-bold text-white">✓</span>
+                            <span>
+                              <span className="block text-[0.68rem] font-bold uppercase tracking-[0.15em] text-emerald-700">Selected district</span>
+                              <span className="mt-0.5 block text-lg font-bold text-stone-950">{getDistrictLabel(form.district, form.language)}</span>
+                            </span>
+                          </div>
+                          <div className="mt-4">
+                            <p className="text-sm font-bold text-stone-950">Quick select</p>
+                            <p className="mt-1 text-xs text-slate-500">Choose a district here or tap its area on the Sri Lanka map.</p>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {DISTRICTS.map((district) => {
+                              const selected = form.district === district;
+                              return (
+                                <button
+                                  key={district}
+                                  type="button"
+                                  onClick={() => setForm((current) => ({ ...current, district, location: '' }))}
+                                  className={`rounded-xl border px-3 py-3 text-center text-xs font-bold transition sm:text-sm ${selected ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-950/15' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50'}`}
+                                >
+                                  {getDistrictLabel(district, form.language)}
+                                  {selected && <span className="ml-2" aria-hidden="true">✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <section className="mt-4 border-t border-slate-100 pt-4" aria-label="Field location selection">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-bold text-stone-950">Step 2: {t.fieldLocation}</p>
+                                <p className="mt-1 text-xs leading-5 text-slate-500">Choose the field area in {getDistrictLabel(form.district, form.language)}.</p>
+                              </div>
+                              {form.location && (
+                                <span className="rounded-full bg-sky-100 px-2 py-1 text-[0.68rem] font-bold text-sky-800">Selected</span>
+                              )}
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              {(FIELD_LOCATIONS_BY_DISTRICT[form.district] ?? []).map((location) => {
+                                const selected = form.location === location;
+                                return (
+                                  <button
+                                    key={location}
+                                    type="button"
+                                    onClick={() => setForm((current) => ({ ...current, location }))}
+                                    className={`rounded-xl border px-3 py-3 text-left text-xs font-bold transition ${selected ? 'border-sky-600 bg-sky-600 text-white shadow-md shadow-sky-950/10' : 'border-sky-100 bg-sky-50/70 text-slate-700 hover:border-sky-300 hover:bg-sky-100'}`}
+                                  >
+                                    {fieldLocationLabels[form.language][location] ?? location}
+                                    {selected && <span className="float-right" aria-hidden="true">✓</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </section>
+                        </section>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-3xl border border-violet-100 bg-[linear-gradient(135deg,_#faf5ff,_#fdf4ff)] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-700">{t.chooseSeason}</p>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {SEASONS.map((season) => {
+                        const selected = form.season === season;
+                        return (
+                          <button
+                            key={season}
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, season }))}
+                            className={`rounded-2xl border px-3 py-3 text-center text-sm font-bold transition ${selected ? 'border-violet-600 bg-violet-600 text-white shadow-md shadow-violet-950/10' : 'border-white bg-white/85 text-stone-700 hover:border-violet-300 hover:bg-violet-50'}`}
+                          >
+                            {getSeasonLabel(season, form.language)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
-                    <input
-                      value={form.location}
-                      onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))}
-                      placeholder={t.fieldLocationPlaceholder}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    />
+
+                  <div className="rounded-3xl border border-amber-100 bg-[linear-gradient(135deg,_#fffbeb,_#f0fdf4)] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">{t.chooseCrop}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {CROP_TYPES.map((cropType) => {
+                        const selected = form.cropType === cropType;
+                        return (
+                          <button
+                            key={cropType}
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, cropType }))}
+                            className={`group rounded-2xl border p-3 text-left transition ${selected ? 'border-emerald-600 bg-emerald-700 text-white shadow-lg shadow-emerald-950/15' : 'border-white bg-white/90 text-stone-700 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md'}`}
+                          >
+                            <span className={`flex h-11 w-11 items-center justify-center rounded-2xl text-3xl transition group-hover:scale-110 ${selected ? 'bg-white/15' : 'bg-amber-50'}`} aria-hidden="true">{cropVisuals[cropType]}</span>
+                            <span className="mt-3 block text-xs font-bold">{cropTypeLabels[form.language][cropType]}</span>
+                            {selected && <span className="mt-1 block text-[10px] font-semibold text-lime-200">{t.selectedCrop}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
-                    <input
-                      value={form.cropType}
-                      onChange={(e) => setForm((current) => ({ ...current, cropType: e.target.value }))}
-                      placeholder={t.cropTypePlaceholder}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-600">{t.chooseLandSize}</p>
+                      <div className="mt-3 grid grid-cols-4 gap-2">
+                        {['0.5', '1', '2', '5'].map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, landSize: size }))}
+                            className={`rounded-xl px-2 py-2.5 text-xs font-bold transition ${form.landSize === size ? 'bg-stone-900 text-white shadow-sm' : 'bg-white text-stone-600 hover:bg-stone-200'}`}
+                          >
+                            {size} ac
+                          </button>
+                        ))}
+                      </div>
+                      <label htmlFor="soil-land-size" className="mt-3 block text-xs font-semibold text-stone-500">{t.customLandSize}</label>
+                      <input
+                        id="soil-land-size"
+                        type="number"
+                        min="0.25"
+                        step="0.25"
+                        value={form.landSize}
+                        onChange={(e) => setForm((current) => ({ ...current, landSize: e.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-900 outline-none transition focus:border-emerald-500"
+                      />
+                    </div>
+                    {mode === 'request' && (
+                      <div className="rounded-3xl border border-rose-100 bg-[linear-gradient(135deg,_#fff1f2,_#fff7ed)] p-4">
+                        <div className="flex items-center gap-2 text-rose-700">
+                          <CalendarDaysIcon className="h-5 w-5" />
+                          <p className="text-xs font-bold uppercase tracking-[0.16em]">{t.preferredVisitDate}</p>
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-stone-900">{form.preferredDate || t.notSet}</p>
+                        <input
+                          type="date"
+                          value={form.preferredDate}
+                          onChange={(e) => setForm((current) => ({ ...current, preferredDate: e.target.value }))}
+                          className="mt-3 w-full rounded-2xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 outline-none transition focus:border-rose-400"
+                        />
+                      </div>
+                    )}
                   </div>
+
                   {mode === 'request' && (
-                    <div className="md:col-span-2">
+                    <div className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <label className="block text-sm font-medium text-stone-700">{t.visitAddress}</label>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                            profileAddress ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
+                        <label className="block text-sm font-bold text-stone-800">{t.visitAddress}</label>
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${profileAddress ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                           {profileAddress ? t.profileAddressFound : t.profileAddressMissing}
                         </span>
                       </div>
@@ -1765,45 +2107,49 @@ export default function SoilHealthPage() {
                         value={form.visitAddress}
                         onChange={(e) => setForm((current) => ({ ...current, visitAddress: e.target.value }))}
                         rows={3}
-                        required={mode === 'request' && !profileAddress}
+                        required={!profileAddress}
                         placeholder={profileAddress || t.visitAddressPlaceholder}
-                        className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        className="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-amber-400"
                       />
                       <p className="mt-2 text-xs text-stone-500">{t.visitAddressHint}</p>
                     </div>
                   )}
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>
-                    <input
-                      type="number"
-                      min="0.25"
-                      step="0.25"
-                      value={form.landSize}
-                      onChange={(e) => setForm((current) => ({ ...current, landSize: e.target.value }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    />
-                  </div>
-                  {mode === 'request' && (
+                </div>
+
+                <div className={`${styles.fieldSnapshot} rounded-2xl border border-emerald-100 px-4 py-3`}>
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-stone-700">{t.preferredVisitDate}</label>
-                      <input
-                        type="date"
-                        value={form.preferredDate}
-                        onChange={(e) => setForm((current) => ({ ...current, preferredDate: e.target.value }))}
-                        className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                      />
+                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">{t.fieldSnapshot}</p>
+                      <p className="mt-1 text-sm font-bold text-stone-900">
+                        {form.location ? `${fieldLocationLabels[form.language][form.location] ?? form.location}, ` : ''}{getDistrictLabel(form.district, form.language)}
+                      </p>
                     </div>
-                  )}
+                    {form.cropType && (
+                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm" aria-label={cropTypeLabels[form.language][form.cropType]}>
+                        {cropVisuals[form.cropType]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                    <span className="rounded-full bg-white/90 px-3 py-1.5 text-emerald-800 shadow-sm">{t.selectedForCheck}</span>
+                    {form.cropType && <span className="rounded-full bg-white/90 px-3 py-1.5 text-emerald-800 shadow-sm">{cropTypeLabels[form.language][form.cropType]}</span>}
+                    <span className="rounded-full bg-white/90 px-3 py-1.5 text-stone-600 shadow-sm">{getSeasonLabel(form.season, form.language)}</span>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">{t.soilPhoto}</label>
-                  <label className="block cursor-pointer">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-semibold text-stone-800">{t.stepPhoto}</label>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${metricsPreview ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}>
+                      {metricsPreview ? t.photoReadyToAnalyse : t.noPhotoSelected}
+                    </span>
+                  </div>
+                  <label className="group block cursor-pointer">
                     <div
-                      className={`rounded-3xl border border-dashed px-5 py-5 transition ${
+                      className={`${styles.dropzone} rounded-3xl border-2 border-dashed px-5 py-6 transition ${
                         metricsPreview
-                          ? 'border-emerald-300 bg-emerald-50/70'
-                          : 'border-stone-300 bg-stone-50 hover:border-emerald-300 hover:bg-emerald-50/40'
+                          ? 'border-emerald-300 bg-emerald-50/70 shadow-inner shadow-emerald-100/50'
+                          : 'border-stone-200 bg-[linear-gradient(145deg,_#fafaf9,_#f0fdf4)] hover:border-emerald-400 hover:bg-emerald-50/70'
                       }`}
                     >
                       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1815,8 +2161,8 @@ export default function SoilHealthPage() {
                               className="h-20 w-20 rounded-2xl object-cover border border-emerald-100"
                             />
                           ) : (
-                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-stone-500 shadow-sm">
-                              IMG
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-700 text-sm font-bold text-white shadow-lg shadow-emerald-950/15">
+                              SOIL
                             </div>
                           )}
                           <div>
@@ -1827,7 +2173,7 @@ export default function SoilHealthPage() {
                           </div>
                         </div>
                         <div className="flex flex-col items-start gap-2 md:items-end">
-                          <span className="rounded-full bg-stone-900 px-4 py-2 text-sm font-semibold text-white">
+                          <span className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition group-hover:bg-emerald-800">
                             {metricsPreview ? t.changePhoto : t.choosePhoto}
                           </span>
                           {metricsPreview && (
@@ -1848,10 +2194,11 @@ export default function SoilHealthPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">
+                  <label htmlFor="soil-farmer-notes" className="mb-1 block text-sm font-semibold text-stone-800">
                     {mode === 'request' ? t.requestNote : t.optionalNote}
                   </label>
                   <textarea
+                    id="soil-farmer-notes"
                     value={form.farmerNotes}
                     onChange={(e) => setForm((current) => ({ ...current, farmerNotes: e.target.value }))}
                     rows={3}
@@ -1870,21 +2217,30 @@ export default function SoilHealthPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className={`rounded-2xl px-5 py-3 text-sm font-semibold text-white transition ${mode === 'quick' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'} disabled:cursor-not-allowed disabled:opacity-60`}
+                  className={`w-full rounded-2xl px-5 py-4 text-sm font-bold text-white shadow-lg transition ${mode === 'quick' ? 'bg-emerald-700 shadow-emerald-950/15 hover:bg-emerald-800' : 'bg-amber-600 shadow-amber-950/15 hover:bg-amber-700'} disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   {submitting ? t.processing : mode === 'quick' ? t.quickSubmit : t.requestSubmit}
                 </button>
               </form>
             </section>
 
-            <aside className="space-y-6">
-              <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-stone-900">{t.imagePreview}</h2>
+            <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+              <section className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm md:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{t.stepPhoto}</p>
+                    <h2 className="mt-1 text-xl font-bold text-stone-900">{t.imagePreview}</h2>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${metricsPreview ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-600'}`}>{metricsPreview ? t.photoReady : t.liveImagePreview}</span>
+                </div>
                 {metricsPreview ? (
-                  <img src={metricsPreview} alt="Soil preview" className="mt-4 h-56 w-full rounded-2xl object-cover" />
+                  <div className={`${styles.previewFrame} mt-5 rounded-3xl`}>
+                    <img src={metricsPreview} alt="Soil preview" className="h-56 w-full object-cover shadow-sm" />
+                  </div>
                 ) : (
-                  <div className="mt-4 flex h-56 items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-stone-50 text-sm text-stone-400">
-                    {t.previewEmpty}
+                  <div className={`${styles.emptyPreview} mt-5 flex h-56 flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-200 px-6 text-center`}>
+                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-sm font-bold text-emerald-700 shadow-sm">02</span>
+                    <p className="mt-4 text-sm font-medium text-stone-500">{t.previewEmpty}</p>
                   </div>
                 )}
                 {imageMetrics && (
@@ -1914,9 +2270,12 @@ export default function SoilHealthPage() {
               </section>
 
               {latestResult && (
-                <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                <section className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-white p-5 shadow-lg shadow-emerald-950/5 md:p-6">
                   <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold text-stone-900">{t.latestResult}</h2>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{t.stepResult}</p>
+                      <h2 className="mt-1 text-xl font-bold text-stone-900">{t.latestResult}</h2>
+                    </div>
                     <span
                       className={`rounded-full border px-3 py-1 text-xs font-semibold ${getScoreClasses(
                         latestResult.result.classification,
@@ -1926,16 +2285,24 @@ export default function SoilHealthPage() {
                       {latestResult.result.classification}
                     </span>
                   </div>
-                  <div className="mt-4 rounded-3xl bg-stone-900 px-5 py-6 text-white">
-                    <p className="text-xs uppercase tracking-[0.25em] text-stone-300">{t.soilHealthScore}</p>
-                    <p className="mt-2 text-5xl font-bold">{latestResult.result.score}</p>
-                    <p className="mt-2 text-sm text-stone-300">
-                      {t.confidence} {(latestResult.result.confidence * 100).toFixed(0)}% | {latestResult.result.soilType}
-                    </p>
+                  <div className="mt-5 rounded-3xl bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.28),_transparent_38%),linear-gradient(135deg,_#062f25,_#07583f)] px-5 py-6 text-white">
+                    <div className="flex items-end justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.22em] text-lime-200">{t.soilHealthScore}</p>
+                        <p className="mt-2 text-6xl font-black tracking-tight">{latestResult.result.score}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-right text-xs text-emerald-50">
+                        <p className="font-bold text-white">{latestResult.result.soilType}</p>
+                        <p className="mt-1">{t.confidence} {(latestResult.result.confidence * 100).toFixed(0)}%</p>
+                      </div>
+                    </div>
+                    <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/15">
+                      <div className="h-full rounded-full bg-lime-300" style={{ width: `${Math.min(100, Math.max(0, latestResult.result.score))}%` }} />
+                    </div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     {Object.entries(latestResult.result.readings).map(([key, value]) => (
-                      <div key={key} className="rounded-2xl bg-stone-50 p-3">
+                      <div key={key} className="rounded-2xl border border-stone-100 bg-stone-50 p-3 transition hover:border-emerald-200 hover:bg-emerald-50/40">
                         <p className="text-stone-500">
                           {t[readingLabelKeyMap[key as keyof SoilRecord['result']['readings']]]}
                         </p>
@@ -2321,25 +2688,33 @@ export default function SoilHealthPage() {
                     <div className="mt-3 grid gap-3">
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
-                        <select
-                          value={requestDraft.district}
-                          onChange={(event) => setRequestDraft((current) => ({ ...current, district: event.target.value }))}
-                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        >
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                           {DISTRICTS.map((district) => (
-                            <option key={district} value={district}>
+                            <button
+                              key={district}
+                              type="button"
+                              onClick={() => setRequestDraft((current) => ({ ...current, district, location: '' }))}
+                              className={`rounded-xl border px-2 py-2 text-left text-xs font-semibold transition ${requestDraft.district === district ? 'border-emerald-600 bg-emerald-700 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-emerald-300'}`}
+                            >
                               {getDistrictLabel(district, form.language)}
-                            </option>
+                            </button>
                           ))}
-                        </select>
+                        </div>
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
-                        <input
-                          value={requestDraft.location}
-                          onChange={(event) => setRequestDraft((current) => ({ ...current, location: event.target.value }))}
-                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          {(FIELD_LOCATIONS_BY_DISTRICT[requestDraft.district] ?? []).map((location) => (
+                            <button
+                              key={location}
+                              type="button"
+                              onClick={() => setRequestDraft((current) => ({ ...current, location }))}
+                              className={`rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition ${requestDraft.location === location ? 'border-sky-500 bg-sky-600 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-sky-300'}`}
+                            >
+                              {fieldLocationLabels[form.language][location] ?? location}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.visitAddress}</label>
@@ -2353,26 +2728,35 @@ export default function SoilHealthPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
-                        <input
-                          value={requestDraft.cropType}
-                          onChange={(event) => setRequestDraft((current) => ({ ...current, cropType: event.target.value }))}
-                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        />
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          {CROP_TYPES.map((cropType) => (
+                            <button
+                              key={cropType}
+                              type="button"
+                              onClick={() => setRequestDraft((current) => ({ ...current, cropType }))}
+                              className={`rounded-xl border px-2 py-2 text-center text-xs font-semibold transition ${requestDraft.cropType === cropType ? 'border-emerald-600 bg-emerald-700 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-emerald-300'}`}
+                            >
+                              <span className="block text-xl" aria-hidden="true">{cropVisuals[cropType]}</span>
+                              <span className="mt-1 block">{cropTypeLabels[form.language][cropType]}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-sm font-medium text-stone-700">{t.season}</label>
-                          <select
-                            value={requestDraft.season}
-                            onChange={(event) => setRequestDraft((current) => ({ ...current, season: event.target.value }))}
-                            className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                          >
+                          <div className="grid grid-cols-3 gap-2">
                             {SEASONS.map((season) => (
-                              <option key={season} value={season}>
+                              <button
+                                key={season}
+                                type="button"
+                                onClick={() => setRequestDraft((current) => ({ ...current, season }))}
+                                className={`rounded-xl border px-2 py-2 text-xs font-semibold transition ${requestDraft.season === season ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-violet-300'}`}
+                              >
                                 {getSeasonLabel(season, form.language)}
-                              </option>
+                              </button>
                             ))}
-                          </select>
+                          </div>
                         </div>
                         <div>
                           <label className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>

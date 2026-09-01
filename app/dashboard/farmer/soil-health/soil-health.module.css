@@ -1,0 +1,121 @@
+.workspace {
+  min-height: 100%;
+  background-color: #f5f7f1;
+  background-image:
+    radial-gradient(circle at 88% 4%, rgba(163, 230, 53, 0.12), transparent 22rem),
+    radial-gradient(circle at 18% 36%, rgba(16, 185, 129, 0.08), transparent 24rem),
+    linear-gradient(rgba(6, 59, 46, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 59, 46, 0.025) 1px, transparent 1px);
+  background-size: auto, auto, 26px 26px, 26px 26px;
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero::after {
+  position: absolute;
+  z-index: -1;
+  top: -7rem;
+  right: -4rem;
+  width: 19rem;
+  height: 19rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2.5rem rgba(255, 255, 255, 0.035), 0 0 0 5rem rgba(255, 255, 255, 0.025);
+  content: '';
+}
+
+.modeOption {
+  position: relative;
+  min-height: 112px;
+  overflow: hidden;
+}
+
+.modeOption::after {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.7rem;
+  color: currentColor;
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.07;
+  content: attr(data-step);
+}
+
+.modeOptionActive {
+  box-shadow: 0 14px 30px -20px rgba(4, 120, 87, 0.7);
+}
+
+.dropzone {
+  position: relative;
+  overflow: hidden;
+}
+
+.dropzone::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 4% 0%, rgba(163, 230, 53, 0.2), transparent 14rem);
+  content: '';
+}
+
+.previewFrame {
+  position: relative;
+  overflow: hidden;
+}
+
+.previewFrame::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: inherit;
+  content: '';
+}
+
+.emptyPreview {
+  background-image:
+    radial-gradient(circle at center, rgba(16, 185, 129, 0.13) 0 2px, transparent 2px),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(236, 253, 245, 0.72));
+  background-size: 20px 20px, auto;
+}
+
+.cropPreview {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(250, 204, 21, 0.34), transparent 5rem),
+    linear-gradient(135deg, #f0fdf4, #fffbeb);
+}
+
+.cropPreview::after {
+  position: absolute;
+  top: -1.2rem;
+  right: 0.5rem;
+  color: rgba(6, 95, 70, 0.08);
+  font-size: 5.5rem;
+  line-height: 1;
+  content: '✦';
+}
+
+.fieldSnapshot {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f0fdfa, #ecfdf5 50%, #f7fee7);
+}
+
+.pulseDot {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.72); opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseDot { animation: none; }
+}
