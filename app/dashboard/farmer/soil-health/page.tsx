@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDaysIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import FarmerSidebar from '@/app/navigation/farmer/page';
+import {
+  SRI_LANKA_DISTRICT_REGIONS,
+  SRI_LANKA_ISLAND_OUTLINE,
+  SRI_LANKA_MAP_VIEW_BOX,
+} from '../prediction/components/sell-advisor/districtMapRegions';
 import styles from './soil-health.module.css';
 
 type Mode = 'quick' | 'request';
@@ -1859,7 +1864,7 @@ export default function SoilHealthPage() {
                   {mode === 'quick' ? t.quickDescription : t.requestDescription}
                 </div>
                 <div className="space-y-5">
-                  <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+                  <div>
                     <div className="rounded-3xl border border-emerald-100 bg-[linear-gradient(135deg,_#f0fdf4,_#ecfdf5)] p-4">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">{t.district}</p>
                       <button
@@ -1875,49 +1880,134 @@ export default function SoilHealthPage() {
                         <span className="text-lg font-bold text-emerald-700">{districtPickerOpen ? '−' : '+'}</span>
                       </button>
                     </div>
-                    <div className="rounded-3xl border border-sky-100 bg-[linear-gradient(135deg,_#f0f9ff,_#f0fdfa)] p-4">
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-700">{t.fieldLocation}</p>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        {(FIELD_LOCATIONS_BY_DISTRICT[form.district] ?? []).map((location) => {
-                          const selected = form.location === location;
-                          return (
-                            <button
-                              key={location}
-                              type="button"
-                              onClick={() => setForm((current) => ({ ...current, location }))}
-                              className={`rounded-2xl border px-3 py-3 text-left text-xs font-semibold transition ${selected ? 'border-sky-500 bg-sky-600 text-white shadow-md shadow-sky-950/10' : 'border-white bg-white/90 text-stone-700 hover:border-sky-300 hover:bg-sky-50'}`}
-                            >
-                              {fieldLocationLabels[form.language][location] ?? location}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
                   </div>
 
                   {districtPickerOpen && (
-                    <div className="rounded-3xl border border-emerald-200 bg-white p-4 shadow-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-bold text-stone-900">{t.chooseDistrict}</p>
-                        <p className="text-xs text-stone-500">Sri Lanka</p>
-                      </div>
-                      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                        {DISTRICTS.map((district) => {
-                          const selected = form.district === district;
-                          return (
-                            <button
-                              key={district}
-                              type="button"
-                              onClick={() => {
-                                setForm((current) => ({ ...current, district, location: '' }));
-                                setDistrictPickerOpen(false);
-                              }}
-                              className={`rounded-2xl border px-3 py-3 text-left text-xs font-semibold transition ${selected ? 'border-emerald-600 bg-emerald-700 text-white shadow-md shadow-emerald-950/15' : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-emerald-300 hover:bg-emerald-50'}`}
-                            >
-                              {getDistrictLabel(district, form.language)}
-                            </button>
-                          );
-                        })}
+                    <div className="rounded-[2rem] border border-slate-200 bg-slate-50/80 p-3 shadow-sm md:p-4">
+                      <div className="grid gap-4 md:grid-cols-[0.82fr_1.18fr]">
+                        <section className="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-emerald-50/70 p-3 shadow-sm sm:p-4" aria-label="Sri Lanka district map">
+                          <div className="relative text-center">
+                            <p className="text-base font-bold text-stone-950">{t.chooseDistrict}</p>
+                            <p className="mt-1 text-xs font-medium text-slate-500">Tap a district on the map to update your field locations.</p>
+                          </div>
+                          <svg
+                            viewBox={SRI_LANKA_MAP_VIEW_BOX}
+                            className="mx-auto h-[27rem] w-full max-w-[22rem]"
+                            preserveAspectRatio="xMidYMid meet"
+                            role="group"
+                            aria-label="Interactive map of Sri Lankan districts"
+                          >
+                            <path
+                              d={SRI_LANKA_ISLAND_OUTLINE}
+                              className="fill-slate-100 stroke-slate-300"
+                              strokeWidth="2"
+                              aria-hidden="true"
+                            />
+                            {SRI_LANKA_DISTRICT_REGIONS.map((region) => {
+                              const district = region.label;
+                              const selected = district === form.district;
+                              return (
+                                <path
+                                  key={region.id}
+                                  d={region.path}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Select ${getDistrictLabel(district, form.language)} district`}
+                                  aria-pressed={selected}
+                                  onClick={() => {
+                                    setForm((current) => ({ ...current, district, location: '' }));
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                                    event.preventDefault();
+                                    setForm((current) => ({ ...current, district, location: '' }));
+                                  }}
+                                  className={selected
+                                    ? 'cursor-pointer fill-emerald-500 stroke-emerald-800 stroke-[3] outline-none'
+                                    : 'cursor-pointer fill-emerald-100 stroke-white stroke-2 outline-none transition-colors duration-150 hover:fill-emerald-200 focus-visible:fill-emerald-200 focus-visible:stroke-emerald-700 focus-visible:stroke-[3]'}
+                                >
+                                  <title>{getDistrictLabel(district, form.language)}</title>
+                                </path>
+                              );
+                            })}
+                            <path
+                              d={SRI_LANKA_ISLAND_OUTLINE}
+                              className="pointer-events-none fill-none stroke-slate-400"
+                              strokeWidth="2"
+                              aria-hidden="true"
+                            />
+                          </svg>
+                          <div className="flex items-center justify-center gap-4 text-[0.68rem] font-semibold text-slate-600">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="size-2.5 rounded-sm border border-emerald-700 bg-emerald-500" aria-hidden="true" />
+                              Selected district
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="size-2.5 rounded-sm border border-emerald-300 bg-emerald-100" aria-hidden="true" />
+                              Available district
+                            </span>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-white bg-white/95 px-3 py-2 shadow-sm" aria-live="polite">
+                            <span className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-emerald-700">Map selection</span>
+                            <span className="text-sm font-bold text-stone-950">{getDistrictLabel(form.district, form.language)}</span>
+                          </div>
+                        </section>
+                        <section className="rounded-[1.75rem] border border-slate-200 bg-white p-4 sm:p-5" aria-label="District quick selection">
+                          <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-xl font-bold text-white">✓</span>
+                            <span>
+                              <span className="block text-[0.68rem] font-bold uppercase tracking-[0.15em] text-emerald-700">Selected district</span>
+                              <span className="mt-0.5 block text-lg font-bold text-stone-950">{getDistrictLabel(form.district, form.language)}</span>
+                            </span>
+                          </div>
+                          <div className="mt-4">
+                            <p className="text-sm font-bold text-stone-950">Quick select</p>
+                            <p className="mt-1 text-xs text-slate-500">Choose a district here or tap its area on the Sri Lanka map.</p>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {DISTRICTS.map((district) => {
+                              const selected = form.district === district;
+                              return (
+                                <button
+                                  key={district}
+                                  type="button"
+                                  onClick={() => setForm((current) => ({ ...current, district, location: '' }))}
+                                  className={`rounded-xl border px-3 py-3 text-center text-xs font-bold transition sm:text-sm ${selected ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-950/15' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50'}`}
+                                >
+                                  {getDistrictLabel(district, form.language)}
+                                  {selected && <span className="ml-2" aria-hidden="true">✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <section className="mt-4 border-t border-slate-100 pt-4" aria-label="Field location selection">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-bold text-stone-950">Step 2: {t.fieldLocation}</p>
+                                <p className="mt-1 text-xs leading-5 text-slate-500">Choose the field area in {getDistrictLabel(form.district, form.language)}.</p>
+                              </div>
+                              {form.location && (
+                                <span className="rounded-full bg-sky-100 px-2 py-1 text-[0.68rem] font-bold text-sky-800">Selected</span>
+                              )}
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              {(FIELD_LOCATIONS_BY_DISTRICT[form.district] ?? []).map((location) => {
+                                const selected = form.location === location;
+                                return (
+                                  <button
+                                    key={location}
+                                    type="button"
+                                    onClick={() => setForm((current) => ({ ...current, location }))}
+                                    className={`rounded-xl border px-3 py-3 text-left text-xs font-bold transition ${selected ? 'border-sky-600 bg-sky-600 text-white shadow-md shadow-sky-950/10' : 'border-sky-100 bg-sky-50/70 text-slate-700 hover:border-sky-300 hover:bg-sky-100'}`}
+                                  >
+                                    {fieldLocationLabels[form.language][location] ?? location}
+                                    {selected && <span className="float-right" aria-hidden="true">✓</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </section>
+                        </section>
                       </div>
                     </div>
                   )}
