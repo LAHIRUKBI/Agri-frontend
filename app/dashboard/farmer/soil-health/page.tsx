@@ -292,6 +292,14 @@ const uiText = {
       'Use a soil photo for an instant estimation now, or request a field officer visit for the full fusion result later.',
     workflowTitle: 'Current workflow',
     workflowText: 'Photo upload -> image analysis -> quick score or sensor request',
+    stepDetails: '1. Field details',
+    stepPhoto: '2. Soil photo',
+    stepResult: '3. Get guidance',
+    formTitle: 'Start your soil check',
+    quickDescription: 'Get an instant image-based soil estimate.',
+    requestDescription: 'Request a field officer for sensor readings and review.',
+    photoReadyToAnalyse: 'Photo ready to analyse',
+    noPhotoSelected: 'No photo selected yet',
     quickMode: 'Quick Image Check',
     requestMode: 'Request Sensor Visit',
     district: 'District',
@@ -424,6 +432,14 @@ const uiText = {
       'දැන්ම පසේ ඡායාරූපයක් භාවිතා කර ඉක්මන් ඇස්තමේන්තුවක් ලබාගන්න, නැත්නම් පසුව පූර්ණ විශ්ලේෂණය සඳහා ක්ෂේත්‍ර නිලධාරී සංචාරයක් ඉල්ලන්න.',
     workflowTitle: 'දැනට ක්‍රියාදාමය',
     workflowText: 'ඡායාරූපය upload කිරීම -> image analysis -> quick score හෝ sensor request',
+    stepDetails: '1. ඉඩම් විස්තර',
+    stepPhoto: '2. පස් ඡායාරූපය',
+    stepResult: '3. මඟපෙන්වීම ලබාගන්න',
+    formTitle: 'ඔබගේ පස් පරීක්ෂාව ආරම්භ කරන්න',
+    quickDescription: 'ඡායාරූපය මත පදනම් වූ ඉක්මන් පස් ඇස්තමේන්තුවක් ලබාගන්න.',
+    requestDescription: 'Sensor readings සහ පරීක්ෂාව සඳහා field officer කෙනෙක් ඉල්ලන්න.',
+    photoReadyToAnalyse: 'ඡායාරූපය analysis සඳහා සූදානම්',
+    noPhotoSelected: 'තවම ඡායාරූපයක් තෝරා නැහැ',
     quickMode: 'ඉක්මන් ඡායාරූප පරීක්ෂාව',
     requestMode: 'සංවේදක සංචාරයක් ඉල්ලන්න',
     district: 'දිස්ත්‍රික්කය',
@@ -1697,27 +1713,27 @@ export default function SoilHealthPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-stone-50">
+    <div className="flex min-h-screen bg-[#f4f7f2]">
       <FarmerSidebar user={user} />
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-3xl border border-stone-200 bg-[radial-gradient(circle_at_top_left,_#f7fee7,_#fafaf9_55%)] p-6 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <section className="overflow-hidden rounded-[2rem] border border-emerald-950 bg-[radial-gradient(circle_at_84%_18%,_rgba(163,230,53,0.26),_transparent_25%),linear-gradient(120deg,_#063a2c,_#0a5a42_58%,_#0d6b4b)] p-6 shadow-xl shadow-emerald-950/10 md:p-8">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">{t.moduleTag}</p>
-                <h1 className="mt-2 text-3xl font-bold text-stone-900">{t.title}</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">{t.subtitle}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-lime-300">{t.moduleTag}</p>
+                <h1 className="mt-3 max-w-3xl text-3xl font-bold leading-tight text-white md:text-4xl">{t.title}</h1>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-emerald-50/85 md:text-base">{t.subtitle}</p>
               </div>
               <div className="flex flex-col items-start gap-3 md:items-end">
-                <div className="rounded-full border border-stone-200 bg-white p-1 shadow-sm">
+                <div className="rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-sm">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setForm((current) => ({ ...current, language: 'English' }))}
                       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                         form.language === 'English'
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-stone-600 hover:bg-stone-100'
+                          ? 'bg-white text-emerald-950 shadow-sm'
+                          : 'text-emerald-50 hover:bg-white/10'
                       }`}
                     >
                       English
@@ -1727,42 +1743,58 @@ export default function SoilHealthPage() {
                       onClick={() => setForm((current) => ({ ...current, language: 'Sinhala' }))}
                       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                         form.language === 'Sinhala'
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-stone-600 hover:bg-stone-100'
+                          ? 'bg-white text-emerald-950 shadow-sm'
+                          : 'text-emerald-50 hover:bg-white/10'
                       }`}
                     >
                       සිංහල
                     </button>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-emerald-200 bg-white/80 px-4 py-3 text-sm text-stone-600">
-                  <p className="font-semibold text-stone-800">{t.workflowTitle}</p>
-                  <p>{t.workflowText}</p>
+                <div className="max-w-sm rounded-2xl border border-white/15 bg-black/10 px-4 py-3 text-sm text-emerald-50/90 backdrop-blur-sm">
+                  <p className="font-semibold text-white">{t.workflowTitle}</p>
+                  <p className="mt-1">{t.workflowText}</p>
                 </div>
               </div>
+            </div>
+            <div className="mt-7 grid gap-2 sm:grid-cols-3">
+              {[t.stepDetails, t.stepPhoto, t.stepResult].map((step, index) => (
+                <div key={step} className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${index === 0 ? 'border-lime-300 bg-lime-300 text-emerald-950' : 'border-white/15 bg-white/10 text-white'}`}>
+                  {step}
+                </div>
+              ))}
             </div>
           </section>
 
           <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
-            <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap gap-3">
+            <section className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm md:p-6">
+              <div className="flex flex-col gap-4 border-b border-stone-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{t.stepDetails}</p>
+                  <h2 className="mt-1 text-xl font-bold text-stone-900">{t.formTitle}</h2>
+                </div>
+                <div className="flex flex-wrap gap-2 rounded-2xl bg-stone-100 p-1.5">
                 <button
                   type="button"
                   onClick={() => setMode('quick')}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${mode === 'quick' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-stone-300 text-stone-700 hover:border-emerald-300 hover:text-emerald-700'}`}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${mode === 'quick' ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-600 hover:bg-white hover:text-emerald-700'}`}
                 >
                   {t.quickMode}
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode('request')}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${mode === 'request' ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 text-stone-700 hover:border-amber-300 hover:text-amber-700'}`}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${mode === 'request' ? 'bg-amber-500 text-white shadow-sm' : 'text-stone-600 hover:bg-white hover:text-amber-700'}`}
                 >
                   {t.requestMode}
                 </button>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                <div className={`rounded-2xl border px-4 py-3 text-sm ${mode === 'quick' ? 'border-emerald-100 bg-emerald-50 text-emerald-900' : 'border-amber-100 bg-amber-50 text-amber-900'}`}>
+                  {mode === 'quick' ? t.quickDescription : t.requestDescription}
+                </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
@@ -1870,13 +1902,18 @@ export default function SoilHealthPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">{t.soilPhoto}</label>
-                  <label className="block cursor-pointer">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-semibold text-stone-800">{t.stepPhoto}</label>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${metricsPreview ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}>
+                      {metricsPreview ? t.photoReadyToAnalyse : t.noPhotoSelected}
+                    </span>
+                  </div>
+                  <label className="group block cursor-pointer">
                     <div
-                      className={`rounded-3xl border border-dashed px-5 py-5 transition ${
+                      className={`rounded-3xl border-2 border-dashed px-5 py-6 transition ${
                         metricsPreview
-                          ? 'border-emerald-300 bg-emerald-50/70'
-                          : 'border-stone-300 bg-stone-50 hover:border-emerald-300 hover:bg-emerald-50/40'
+                          ? 'border-emerald-300 bg-emerald-50/70 shadow-inner shadow-emerald-100/50'
+                          : 'border-stone-200 bg-[linear-gradient(145deg,_#fafaf9,_#f0fdf4)] hover:border-emerald-400 hover:bg-emerald-50/70'
                       }`}
                     >
                       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1888,8 +1925,8 @@ export default function SoilHealthPage() {
                               className="h-20 w-20 rounded-2xl object-cover border border-emerald-100"
                             />
                           ) : (
-                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-stone-500 shadow-sm">
-                              IMG
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-700 text-sm font-bold text-white shadow-lg shadow-emerald-950/15">
+                              SOIL
                             </div>
                           )}
                           <div>
@@ -1900,7 +1937,7 @@ export default function SoilHealthPage() {
                           </div>
                         </div>
                         <div className="flex flex-col items-start gap-2 md:items-end">
-                          <span className="rounded-full bg-stone-900 px-4 py-2 text-sm font-semibold text-white">
+                          <span className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition group-hover:bg-emerald-800">
                             {metricsPreview ? t.changePhoto : t.choosePhoto}
                           </span>
                           {metricsPreview && (
@@ -1921,7 +1958,7 @@ export default function SoilHealthPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-stone-700">
+                  <label className="mb-1 block text-sm font-semibold text-stone-800">
                     {mode === 'request' ? t.requestNote : t.optionalNote}
                   </label>
                   <textarea
@@ -1943,21 +1980,28 @@ export default function SoilHealthPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className={`rounded-2xl px-5 py-3 text-sm font-semibold text-white transition ${mode === 'quick' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'} disabled:cursor-not-allowed disabled:opacity-60`}
+                  className={`w-full rounded-2xl px-5 py-4 text-sm font-bold text-white shadow-lg transition ${mode === 'quick' ? 'bg-emerald-700 shadow-emerald-950/15 hover:bg-emerald-800' : 'bg-amber-600 shadow-amber-950/15 hover:bg-amber-700'} disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   {submitting ? t.processing : mode === 'quick' ? t.quickSubmit : t.requestSubmit}
                 </button>
               </form>
             </section>
 
-            <aside className="space-y-6">
-              <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-stone-900">{t.imagePreview}</h2>
+            <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+              <section className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm md:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{t.stepPhoto}</p>
+                    <h2 className="mt-1 text-xl font-bold text-stone-900">{t.imagePreview}</h2>
+                  </div>
+                  <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">{metricsPreview ? t.photoReady : 'Preview'}</span>
+                </div>
                 {metricsPreview ? (
-                  <img src={metricsPreview} alt="Soil preview" className="mt-4 h-56 w-full rounded-2xl object-cover" />
+                  <img src={metricsPreview} alt="Soil preview" className="mt-5 h-56 w-full rounded-3xl object-cover shadow-sm" />
                 ) : (
-                  <div className="mt-4 flex h-56 items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-stone-50 text-sm text-stone-400">
-                    {t.previewEmpty}
+                  <div className="mt-5 flex h-56 flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-200 bg-emerald-50/50 px-6 text-center">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-sm font-bold text-emerald-700 shadow-sm">02</span>
+                    <p className="mt-4 text-sm font-medium text-stone-500">{t.previewEmpty}</p>
                   </div>
                 )}
                 {imageMetrics && (
