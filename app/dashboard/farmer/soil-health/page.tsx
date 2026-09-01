@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CalendarDaysIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import FarmerSidebar from '@/app/navigation/farmer/page';
 import styles from './soil-health.module.css';
 
@@ -321,6 +322,13 @@ const uiText = {
     selectedCrop: 'Selected crop',
     cropReadyHint: 'This crop will be used when preparing your soil guidance.',
     fieldSnapshot: 'Your field snapshot',
+    changeSelection: 'Tap to change',
+    chooseDistrict: 'Choose your district',
+    chooseLocation: 'Choose a field location',
+    chooseSeason: 'Choose the growing season',
+    chooseCrop: 'Choose the crop you are growing',
+    chooseLandSize: 'Choose your land area',
+    customLandSize: 'Custom acres',
     quickMode: 'Quick Image Check',
     requestMode: 'Request Sensor Visit',
     district: 'District',
@@ -470,6 +478,13 @@ const uiText = {
     selectedCrop: 'තෝරාගත් වගාව',
     cropReadyHint: 'ඔබේ පස් මඟපෙන්වීම සකස් කිරීමේදී මෙම වගාව භාවිතා වේ.',
     fieldSnapshot: 'ඔබේ ඉඩමේ සාරාංශය',
+    changeSelection: 'වෙනස් කිරීමට තට්ටු කරන්න',
+    chooseDistrict: 'ඔබේ දිස්ත්‍රික්කය තෝරන්න',
+    chooseLocation: 'ඉඩමේ ස්ථානය තෝරන්න',
+    chooseSeason: 'වගා වාරය තෝරන්න',
+    chooseCrop: 'ඔබ වගා කරන බෝගය තෝරන්න',
+    chooseLandSize: 'ඔබේ ඉඩම් ප්‍රමාණය තෝරන්න',
+    customLandSize: 'වෙනත් අක්කර ප්‍රමාණයක්',
     quickMode: 'ඉක්මන් ඡායාරූප පරීක්ෂාව',
     requestMode: 'සංවේදක සංචාරයක් ඉල්ලන්න',
     district: 'දිස්ත්‍රික්කය',
@@ -943,6 +958,7 @@ export default function SoilHealthPage() {
   const [isPreviewScrolling, setIsPreviewScrolling] = useState(false);
   const [isRequestPreviewScrolling, setIsRequestPreviewScrolling] = useState(false);
   const [popup, setPopup] = useState<PopupState | null>(null);
+  const [districtPickerOpen, setDistrictPickerOpen] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
@@ -1842,90 +1858,158 @@ export default function SoilHealthPage() {
                   <span className={`${styles.pulseDot} h-2.5 w-2.5 shrink-0 rounded-full ${mode === 'quick' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                   {mode === 'quick' ? t.quickDescription : t.requestDescription}
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label htmlFor="soil-district" className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
-                    <select
-                      id="soil-district"
-                      value={form.district}
-                      onChange={(e) => setForm((current) => ({ ...current, district: e.target.value, location: '' }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    >
-                      {DISTRICTS.map((district) => (
-                        <option key={district} value={district}>
-                          {getDistrictLabel(district, form.language)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="soil-season" className="mb-1 block text-sm font-medium text-stone-700">{t.season}</label>
-                    <select
-                      id="soil-season"
-                      value={form.season}
-                      onChange={(e) => setForm((current) => ({ ...current, season: e.target.value }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    >
-                      {SEASONS.map((season) => (
-                        <option key={season} value={season}>
-                          {getSeasonLabel(season, form.language)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="soil-location" className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
-                    <select
-                      id="soil-location"
-                      value={form.location}
-                      onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    >
-                      <option value="" disabled>{t.fieldLocationPlaceholder}</option>
-                      {(FIELD_LOCATIONS_BY_DISTRICT[form.district] ?? []).map((location) => (
-                        <option key={location} value={location}>
-                          {fieldLocationLabels[form.language][location] ?? location}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="soil-crop-type" className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
-                    <select
-                      id="soil-crop-type"
-                      value={form.cropType}
-                      onChange={(e) => setForm((current) => ({ ...current, cropType: e.target.value }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    >
-                      <option value="" disabled>{t.cropTypePlaceholder}</option>
-                      {CROP_TYPES.map((cropType) => (
-                        <option key={cropType} value={cropType}>
-                          {cropTypeLabels[form.language][cropType]}
-                        </option>
-                      ))}
-                    </select>
-                    {form.cropType && (
-                      <div className={`${styles.cropPreview} mt-3 flex items-center gap-3 rounded-2xl border border-emerald-100 px-3 py-3`}>
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow-sm" aria-hidden="true">
-                          {cropVisuals[form.cropType]}
+                <div className="space-y-5">
+                  <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+                    <div className="rounded-3xl border border-emerald-100 bg-[linear-gradient(135deg,_#f0fdf4,_#ecfdf5)] p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">{t.district}</p>
+                      <button
+                        type="button"
+                        onClick={() => setDistrictPickerOpen((current) => !current)}
+                        className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md"
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white"><MapPinIcon className="h-5 w-5" /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-stone-900">{getDistrictLabel(form.district, form.language)}</span>
+                          <span className="mt-0.5 block text-xs text-stone-500">{t.changeSelection}</span>
                         </span>
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">{t.selectedCrop}</p>
-                          <p className="mt-0.5 truncate text-sm font-bold text-stone-900">{cropTypeLabels[form.language][form.cropType]}</p>
-                          <p className="mt-0.5 text-xs leading-4 text-stone-600">{t.cropReadyHint}</p>
+                        <span className="text-lg font-bold text-emerald-700">{districtPickerOpen ? '−' : '+'}</span>
+                      </button>
+                    </div>
+                    <div className="rounded-3xl border border-sky-100 bg-[linear-gradient(135deg,_#f0f9ff,_#f0fdfa)] p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-700">{t.fieldLocation}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {(FIELD_LOCATIONS_BY_DISTRICT[form.district] ?? []).map((location) => {
+                          const selected = form.location === location;
+                          return (
+                            <button
+                              key={location}
+                              type="button"
+                              onClick={() => setForm((current) => ({ ...current, location }))}
+                              className={`rounded-2xl border px-3 py-3 text-left text-xs font-semibold transition ${selected ? 'border-sky-500 bg-sky-600 text-white shadow-md shadow-sky-950/10' : 'border-white bg-white/90 text-stone-700 hover:border-sky-300 hover:bg-sky-50'}`}
+                            >
+                              {fieldLocationLabels[form.language][location] ?? location}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {districtPickerOpen && (
+                    <div className="rounded-3xl border border-emerald-200 bg-white p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-bold text-stone-900">{t.chooseDistrict}</p>
+                        <p className="text-xs text-stone-500">Sri Lanka</p>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                        {DISTRICTS.map((district) => {
+                          const selected = form.district === district;
+                          return (
+                            <button
+                              key={district}
+                              type="button"
+                              onClick={() => {
+                                setForm((current) => ({ ...current, district, location: '' }));
+                                setDistrictPickerOpen(false);
+                              }}
+                              className={`rounded-2xl border px-3 py-3 text-left text-xs font-semibold transition ${selected ? 'border-emerald-600 bg-emerald-700 text-white shadow-md shadow-emerald-950/15' : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-emerald-300 hover:bg-emerald-50'}`}
+                            >
+                              {getDistrictLabel(district, form.language)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-3xl border border-violet-100 bg-[linear-gradient(135deg,_#faf5ff,_#fdf4ff)] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-700">{t.chooseSeason}</p>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {SEASONS.map((season) => {
+                        const selected = form.season === season;
+                        return (
+                          <button
+                            key={season}
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, season }))}
+                            className={`rounded-2xl border px-3 py-3 text-center text-sm font-bold transition ${selected ? 'border-violet-600 bg-violet-600 text-white shadow-md shadow-violet-950/10' : 'border-white bg-white/85 text-stone-700 hover:border-violet-300 hover:bg-violet-50'}`}
+                          >
+                            {getSeasonLabel(season, form.language)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-amber-100 bg-[linear-gradient(135deg,_#fffbeb,_#f0fdf4)] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">{t.chooseCrop}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {CROP_TYPES.map((cropType) => {
+                        const selected = form.cropType === cropType;
+                        return (
+                          <button
+                            key={cropType}
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, cropType }))}
+                            className={`group rounded-2xl border p-3 text-left transition ${selected ? 'border-emerald-600 bg-emerald-700 text-white shadow-lg shadow-emerald-950/15' : 'border-white bg-white/90 text-stone-700 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md'}`}
+                          >
+                            <span className={`flex h-11 w-11 items-center justify-center rounded-2xl text-3xl transition group-hover:scale-110 ${selected ? 'bg-white/15' : 'bg-amber-50'}`} aria-hidden="true">{cropVisuals[cropType]}</span>
+                            <span className="mt-3 block text-xs font-bold">{cropTypeLabels[form.language][cropType]}</span>
+                            {selected && <span className="mt-1 block text-[10px] font-semibold text-lime-200">{t.selectedCrop}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-600">{t.chooseLandSize}</p>
+                      <div className="mt-3 grid grid-cols-4 gap-2">
+                        {['0.5', '1', '2', '5'].map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, landSize: size }))}
+                            className={`rounded-xl px-2 py-2.5 text-xs font-bold transition ${form.landSize === size ? 'bg-stone-900 text-white shadow-sm' : 'bg-white text-stone-600 hover:bg-stone-200'}`}
+                          >
+                            {size} ac
+                          </button>
+                        ))}
+                      </div>
+                      <label htmlFor="soil-land-size" className="mt-3 block text-xs font-semibold text-stone-500">{t.customLandSize}</label>
+                      <input
+                        id="soil-land-size"
+                        type="number"
+                        min="0.25"
+                        step="0.25"
+                        value={form.landSize}
+                        onChange={(e) => setForm((current) => ({ ...current, landSize: e.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-900 outline-none transition focus:border-emerald-500"
+                      />
+                    </div>
+                    {mode === 'request' && (
+                      <div className="rounded-3xl border border-rose-100 bg-[linear-gradient(135deg,_#fff1f2,_#fff7ed)] p-4">
+                        <div className="flex items-center gap-2 text-rose-700">
+                          <CalendarDaysIcon className="h-5 w-5" />
+                          <p className="text-xs font-bold uppercase tracking-[0.16em]">{t.preferredVisitDate}</p>
                         </div>
+                        <p className="mt-2 text-sm font-bold text-stone-900">{form.preferredDate || t.notSet}</p>
+                        <input
+                          type="date"
+                          value={form.preferredDate}
+                          onChange={(e) => setForm((current) => ({ ...current, preferredDate: e.target.value }))}
+                          className="mt-3 w-full rounded-2xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 outline-none transition focus:border-rose-400"
+                        />
                       </div>
                     )}
                   </div>
+
                   {mode === 'request' && (
-                    <div className="md:col-span-2">
+                    <div className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <label className="block text-sm font-medium text-stone-700">{t.visitAddress}</label>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                            profileAddress ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
+                        <label className="block text-sm font-bold text-stone-800">{t.visitAddress}</label>
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${profileAddress ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                           {profileAddress ? t.profileAddressFound : t.profileAddressMissing}
                         </span>
                       </div>
@@ -1933,34 +2017,11 @@ export default function SoilHealthPage() {
                         value={form.visitAddress}
                         onChange={(e) => setForm((current) => ({ ...current, visitAddress: e.target.value }))}
                         rows={3}
-                        required={mode === 'request' && !profileAddress}
+                        required={!profileAddress}
                         placeholder={profileAddress || t.visitAddressPlaceholder}
-                        className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
+                        className="w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-amber-400"
                       />
                       <p className="mt-2 text-xs text-stone-500">{t.visitAddressHint}</p>
-                    </div>
-                  )}
-                  <div>
-                    <label htmlFor="soil-land-size" className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>
-                    <input
-                      id="soil-land-size"
-                      type="number"
-                      min="0.25"
-                      step="0.25"
-                      value={form.landSize}
-                      onChange={(e) => setForm((current) => ({ ...current, landSize: e.target.value }))}
-                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                    />
-                  </div>
-                  {mode === 'request' && (
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-stone-700">{t.preferredVisitDate}</label>
-                      <input
-                        type="date"
-                        value={form.preferredDate}
-                        onChange={(e) => setForm((current) => ({ ...current, preferredDate: e.target.value }))}
-                        className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                      />
                     </div>
                   )}
                 </div>
@@ -2537,32 +2598,33 @@ export default function SoilHealthPage() {
                     <div className="mt-3 grid gap-3">
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.district}</label>
-                        <select
-                          value={requestDraft.district}
-                          onChange={(event) => setRequestDraft((current) => ({ ...current, district: event.target.value, location: '' }))}
-                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        >
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                           {DISTRICTS.map((district) => (
-                            <option key={district} value={district}>
+                            <button
+                              key={district}
+                              type="button"
+                              onClick={() => setRequestDraft((current) => ({ ...current, district, location: '' }))}
+                              className={`rounded-xl border px-2 py-2 text-left text-xs font-semibold transition ${requestDraft.district === district ? 'border-emerald-600 bg-emerald-700 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-emerald-300'}`}
+                            >
                               {getDistrictLabel(district, form.language)}
-                            </option>
+                            </button>
                           ))}
-                        </select>
+                        </div>
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.fieldLocation}</label>
-                        <select
-                          value={requestDraft.location}
-                          onChange={(event) => setRequestDraft((current) => ({ ...current, location: event.target.value }))}
-                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        >
-                          <option value="" disabled>{t.fieldLocationPlaceholder}</option>
+                        <div className="grid grid-cols-2 gap-2">
                           {(FIELD_LOCATIONS_BY_DISTRICT[requestDraft.district] ?? []).map((location) => (
-                            <option key={location} value={location}>
+                            <button
+                              key={location}
+                              type="button"
+                              onClick={() => setRequestDraft((current) => ({ ...current, location }))}
+                              className={`rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition ${requestDraft.location === location ? 'border-sky-500 bg-sky-600 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-sky-300'}`}
+                            >
                               {fieldLocationLabels[form.language][location] ?? location}
-                            </option>
+                            </button>
                           ))}
-                        </select>
+                        </div>
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.visitAddress}</label>
@@ -2576,33 +2638,35 @@ export default function SoilHealthPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-sm font-medium text-stone-700">{t.cropType}</label>
-                        <select
-                          value={requestDraft.cropType}
-                          onChange={(event) => setRequestDraft((current) => ({ ...current, cropType: event.target.value }))}
-                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                        >
-                          <option value="" disabled>{t.cropTypePlaceholder}</option>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                           {CROP_TYPES.map((cropType) => (
-                            <option key={cropType} value={cropType}>
-                              {cropTypeLabels[form.language][cropType]}
-                            </option>
+                            <button
+                              key={cropType}
+                              type="button"
+                              onClick={() => setRequestDraft((current) => ({ ...current, cropType }))}
+                              className={`rounded-xl border px-2 py-2 text-center text-xs font-semibold transition ${requestDraft.cropType === cropType ? 'border-emerald-600 bg-emerald-700 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-emerald-300'}`}
+                            >
+                              <span className="block text-xl" aria-hidden="true">{cropVisuals[cropType]}</span>
+                              <span className="mt-1 block">{cropTypeLabels[form.language][cropType]}</span>
+                            </button>
                           ))}
-                        </select>
+                        </div>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-sm font-medium text-stone-700">{t.season}</label>
-                          <select
-                            value={requestDraft.season}
-                            onChange={(event) => setRequestDraft((current) => ({ ...current, season: event.target.value }))}
-                            className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
-                          >
+                          <div className="grid grid-cols-3 gap-2">
                             {SEASONS.map((season) => (
-                              <option key={season} value={season}>
+                              <button
+                                key={season}
+                                type="button"
+                                onClick={() => setRequestDraft((current) => ({ ...current, season }))}
+                                className={`rounded-xl border px-2 py-2 text-xs font-semibold transition ${requestDraft.season === season ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-violet-300'}`}
+                              >
                                 {getSeasonLabel(season, form.language)}
-                              </option>
+                              </button>
                             ))}
-                          </select>
+                          </div>
                         </div>
                         <div>
                           <label className="mb-1 block text-sm font-medium text-stone-700">{t.landSize}</label>
