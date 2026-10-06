@@ -13,6 +13,7 @@ import styles from './soil-health.module.css';
 type Mode = 'quick' | 'request';
 type LanguageOption = 'English' | 'Sinhala';
 type RequestFilter = 'all' | 'pending' | 'completed' | 'rejected';
+type WizardStep = 1 | 2 | 3 | 4;
 
 interface ImageMetrics {
   brightness: number;
@@ -944,6 +945,7 @@ export default function SoilHealthPage() {
   const [user, setUser] = useState<SidebarUser | null>(null);
   const [form, setForm] = useState(initialForm);
   const [mode, setMode] = useState<Mode>('quick');
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [imageMetrics, setImageMetrics] = useState<ImageMetrics | null>(null);
   const [imageDataUrl, setImageDataUrl] = useState('');
   const [metricsPreview, setMetricsPreview] = useState<string>('');
@@ -975,6 +977,35 @@ export default function SoilHealthPage() {
   );
   const completedPreparationSteps = [form.district, form.location, form.cropType, imageDataUrl].filter(Boolean).length;
   const preparationProgress = Math.round((completedPreparationSteps / 4) * 100);
+  const wizardSteps = form.language === 'Sinhala'
+    ? ['ගොවිබිම් විස්තර', 'බෝගය සහ කාලය', 'පස් ඡායාරූපය', 'සමාලෝචනය සහ යැවීම']
+    : ['Farm details', 'Crop and season', 'Soil photo', 'Review and submit'];
+  const canContinueWizard =
+    (wizardStep === 1 && Boolean(form.district && form.location && Number(form.landSize) > 0)) ||
+    (wizardStep === 2 && Boolean(form.cropType && form.season)) ||
+    (wizardStep === 3 && Boolean(imageMetrics && imageDataUrl)) ||
+    wizardStep === 4;
+
+  const goToNextWizardStep = () => {
+    if (!canContinueWizard) {
+      setError(
+        wizardStep === 1
+          ? 'Please choose your district, field location, and land size before continuing.'
+          : wizardStep === 2
+            ? 'Please choose your crop type and season before continuing.'
+            : 'Please upload a clear soil photo before continuing.'
+      );
+      return;
+    }
+
+    setError('');
+    setWizardStep((current) => Math.min(4, current + 1) as WizardStep);
+  };
+
+  const goToPreviousWizardStep = () => {
+    setError('');
+    setWizardStep((current) => Math.max(1, current - 1) as WizardStep);
+  };
 
   const loadData = useCallback(async () => {
     if (!token) {
@@ -1818,18 +1849,39 @@ export default function SoilHealthPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-7 grid gap-2 sm:grid-cols-3">
-              {[t.stepDetails, t.stepPhoto, t.stepResult].map((step, index) => (
-                <div key={step} className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${index === 0 ? 'border-lime-300 bg-lime-300 text-emerald-950' : 'border-white/15 bg-white/10 text-white'}`}>
-                  {step}
-                </div>
-              ))}
+            <div className="mt-7 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {wizardSteps.map((step, index) => {
+                const stepNumber = (index + 1) as WizardStep;
+                const active = wizardStep === stepNumber;
+                const complete = wizardStep > stepNumber;
+                return (
+                  <button
+                    key={step}
+                    type="button"
+                    onClick={() => complete && setWizardStep(stepNumber)}
+                    disabled={!complete && !active}
+                    aria-current={active ? 'step' : undefined}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      active
+                        ? 'border-lime-300 bg-lime-300 text-emerald-950 shadow-lg shadow-emerald-950/15'
+                        : complete
+                          ? 'border-emerald-300 bg-emerald-800/60 text-white hover:bg-emerald-800'
+                          : 'cursor-not-allowed border-white/15 bg-white/10 text-emerald-50/55'
+                    }`}
+                  >
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${active ? 'bg-emerald-950 text-lime-200' : complete ? 'bg-emerald-400 text-emerald-950' : 'bg-white/10 text-emerald-50'}`}>
+                      {complete ? '✓' : stepNumber}
+                    </span>
+                    <span>{step}</span>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
           <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
             <section className="rounded-[2rem] border border-stone-200 bg-white p-5 shadow-sm md:p-6">
-              <div className="border-b border-stone-100 pb-5">
+              <div className={wizardStep === 1 ? 'border-b border-stone-100 pb-5' : 'hidden'}>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{t.stepDetails}</p>
                   <h2 className="mt-1 text-xl font-bold text-stone-900">{t.formTitle}</h2>
@@ -1859,11 +1911,15 @@ export default function SoilHealthPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-                <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${mode === 'quick' ? 'border-emerald-100 bg-emerald-50 text-emerald-900' : 'border-amber-100 bg-amber-50 text-amber-900'}`}>
-                  <span className={`${styles.pulseDot} h-2.5 w-2.5 shrink-0 rounded-full ${mode === 'quick' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                  {mode === 'quick' ? t.quickDescription : t.requestDescription}
-                </div>
+                {wizardStep === 1 && (
+                  <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${mode === 'quick' ? 'border-emerald-100 bg-emerald-50 text-emerald-900' : 'border-amber-100 bg-amber-50 text-amber-900'}`}>
+                    <span className={`${styles.pulseDot} h-2.5 w-2.5 shrink-0 rounded-full ${mode === 'quick' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    {mode === 'quick' ? t.quickDescription : t.requestDescription}
+                  </div>
+                )}
                 <div className="space-y-5">
+                  {wizardStep === 1 && (
+                    <>
                   <div>
                     <div className="rounded-3xl border border-emerald-100 bg-[linear-gradient(135deg,_#f0fdf4,_#ecfdf5)] p-4">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">{t.district}</p>
@@ -2011,7 +2067,11 @@ export default function SoilHealthPage() {
                       </div>
                     </div>
                   )}
+                    </>
+                  )}
 
+                  {wizardStep === 2 && (
+                    <>
                   <div className="rounded-3xl border border-violet-100 bg-[linear-gradient(135deg,_#faf5ff,_#fdf4ff)] p-4">
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-700">{t.chooseSeason}</p>
                     <div className="mt-3 grid grid-cols-3 gap-2">
@@ -2094,8 +2154,10 @@ export default function SoilHealthPage() {
                       </div>
                     )}
                   </div>
+                    </>
+                  )}
 
-                  {mode === 'request' && (
+                  {wizardStep === 4 && mode === 'request' && (
                     <div className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <label className="block text-sm font-bold text-stone-800">{t.visitAddress}</label>
@@ -2116,7 +2178,8 @@ export default function SoilHealthPage() {
                   )}
                 </div>
 
-                <div className={`${styles.fieldSnapshot} rounded-2xl border border-emerald-100 px-4 py-3`}>
+                  {wizardStep === 4 && (
+                  <div className={`${styles.fieldSnapshot} rounded-2xl border border-emerald-100 px-4 py-3`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">{t.fieldSnapshot}</p>
@@ -2135,9 +2198,11 @@ export default function SoilHealthPage() {
                     {form.cropType && <span className="rounded-full bg-white/90 px-3 py-1.5 text-emerald-800 shadow-sm">{cropTypeLabels[form.language][form.cropType]}</span>}
                     <span className="rounded-full bg-white/90 px-3 py-1.5 text-stone-600 shadow-sm">{getSeasonLabel(form.season, form.language)}</span>
                   </div>
-                </div>
+                  </div>
+                  )}
 
-                <div>
+                  {wizardStep === 3 && (
+                  <div>
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <label className="block text-sm font-semibold text-stone-800">{t.stepPhoto}</label>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${metricsPreview ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}>
@@ -2191,9 +2256,11 @@ export default function SoilHealthPage() {
                       className="sr-only"
                     />
                   </label>
-                </div>
+                  </div>
+                  )}
 
-                <div>
+                  {wizardStep === 4 && (
+                  <div>
                   <label htmlFor="soil-farmer-notes" className="mb-1 block text-sm font-semibold text-stone-800">
                     {mode === 'request' ? t.requestNote : t.optionalNote}
                   </label>
@@ -2205,23 +2272,44 @@ export default function SoilHealthPage() {
                     className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-emerald-500"
                     placeholder={t.notePlaceholder}
                   />
-                </div>
+                  </div>
+                  )}
 
-                {error && (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-                )}
-                {notice && (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>
-                )}
+                  {error && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+                  )}
+                  {notice && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>
+                  )}
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className={`w-full rounded-2xl px-5 py-4 text-sm font-bold text-white shadow-lg transition ${mode === 'quick' ? 'bg-emerald-700 shadow-emerald-950/15 hover:bg-emerald-800' : 'bg-amber-600 shadow-amber-950/15 hover:bg-amber-700'} disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  {submitting ? t.processing : mode === 'quick' ? t.quickSubmit : t.requestSubmit}
-                </button>
-              </form>
+                  <div className="flex flex-col-reverse gap-3 border-t border-stone-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                      type="button"
+                      onClick={goToPreviousWizardStep}
+                      disabled={wizardStep === 1}
+                      className="rounded-2xl border border-stone-300 px-5 py-3 text-sm font-bold text-stone-700 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Back
+                    </button>
+                    {wizardStep < 4 ? (
+                      <button
+                        type="button"
+                        onClick={goToNextWizardStep}
+                        className="rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:bg-emerald-800"
+                      >
+                        Continue
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className={`w-full rounded-2xl px-5 py-4 text-sm font-bold text-white shadow-lg transition ${mode === 'quick' ? 'bg-emerald-700 shadow-emerald-950/15 hover:bg-emerald-800' : 'bg-amber-600 shadow-amber-950/15 hover:bg-amber-700'} disabled:cursor-not-allowed disabled:opacity-60`}
+                      >
+                        {submitting ? t.processing : mode === 'quick' ? t.quickSubmit : t.requestSubmit}
+                      </button>
+                    )}
+                  </div>
+                </form>
             </section>
 
             <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
