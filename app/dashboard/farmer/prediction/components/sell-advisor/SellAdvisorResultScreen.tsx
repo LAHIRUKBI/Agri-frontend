@@ -97,7 +97,7 @@ export default function SellAdvisorResultScreen({
         : 'Save Recommendation';
 
   return (
-    <main className="min-h-dvh bg-[radial-gradient(circle_at_8%_12%,rgba(167,243,208,0.22),transparent_24%),radial-gradient(circle_at_92%_6%,rgba(254,243,199,0.34),transparent_24%),linear-gradient(145deg,#f8fcf9_0%,#fbfcf7_54%,#f7fbfd_100%)] px-3 py-2 text-slate-950 sm:px-5 lg:px-7">
+    <main className="min-h-dvh min-w-0 flex-1 bg-[radial-gradient(circle_at_8%_12%,rgba(167,243,208,0.22),transparent_24%),radial-gradient(circle_at_92%_6%,rgba(254,243,199,0.34),transparent_24%),linear-gradient(145deg,#f8fcf9_0%,#fbfcf7_54%,#f7fbfd_100%)] px-3 py-2 pt-20 text-slate-950 sm:px-5 lg:px-7 lg:pt-2">
       <div className="mx-auto w-full max-w-7xl">
         <header className="flex flex-col gap-2 rounded-2xl border border-emerald-100/80 bg-white/80 px-4 py-2 shadow-[0_16px_40px_-34px_rgba(5,100,70,0.5)] sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">

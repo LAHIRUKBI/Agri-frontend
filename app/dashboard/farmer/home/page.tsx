@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import FarmerSidebar from '@/app/navigation/farmer/page';
+import SavedRecommendationsSummary from './components/SavedRecommendationsSummary';
 
 interface ActiveCultivation {
   _id: string;
@@ -311,12 +312,12 @@ export default function FarmerHome() {
   const latestRotationPlan = rotationPlans.length > 0 ? rotationPlans[0] : null;
 
   return (
-    // Single Screen Container - no page scroll allowed
+    // Keep the dashboard viewport fixed while the content pane handles overflow.
     <div className="flex h-screen bg-[linear-gradient(180deg,_#f4f7f4_0%,_#f8faf8_48%,_#f3f6f4_100%)] overflow-hidden">
       <FarmerSidebar user={user} />
       
       {/* Main Content Area - strictly controlled flex structure with enlarged gaps/paddings */}
-      <main className="flex-1 p-5 md:p-6 flex flex-col gap-5 overflow-hidden">
+      <main className="flex-1 p-5 md:p-6 flex flex-col gap-5 overflow-y-auto">
         
         {/* Error Alert */}
         {pageError && (
@@ -440,8 +441,10 @@ export default function FarmerHome() {
           </section>
         </div>
 
+        <SavedRecommendationsSummary />
+
         {/* 3. Bottom Row: Journey + Tracking/Actions (Takes all remaining height dynamically) */}
-        <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
+        <div className="flex-1 grid grid-cols-12 gap-5 min-h-[300px]">
           
           {/* Left Side: Journey Slider */}
           <div className="col-span-12 xl:col-span-8 flex flex-col bg-[linear-gradient(180deg,_#ffffff,_#fcfdfc)] rounded-[32px] border border-gray-200 p-5 shadow-sm min-h-0">

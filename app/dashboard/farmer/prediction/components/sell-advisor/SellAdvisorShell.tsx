@@ -44,7 +44,7 @@ export default function SellAdvisorShell({
   steps,
 }: SellAdvisorShellProps) {
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[linear-gradient(145deg,#f8fcf9_0%,#f7fbfd_48%,#ffffff_100%)] text-slate-950">
+    <main className="relative min-h-dvh min-w-0 flex-1 overflow-hidden bg-[linear-gradient(145deg,#f8fcf9_0%,#f7fbfd_48%,#ffffff_100%)] text-slate-950">
       <div
         className="pointer-events-none absolute -left-28 top-24 size-80 rounded-full bg-emerald-100/50 blur-3xl"
         aria-hidden="true"
@@ -55,7 +55,7 @@ export default function SellAdvisorShell({
       />
 
       <div
-        className={`relative mx-auto flex min-h-dvh w-full flex-col px-4 py-4 sm:px-7 sm:py-5 lg:px-10 lg:py-6 ${
+        className={`relative mx-auto flex min-h-dvh w-full flex-col px-4 pb-4 pt-20 sm:px-7 sm:pb-5 lg:px-10 lg:py-6 ${
           currentStepId === 'location' ? 'max-w-[82rem]' : 'max-w-6xl'
         }`}
       >

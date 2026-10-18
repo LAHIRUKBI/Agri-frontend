@@ -1,5 +1,6 @@
 'use client';
 
+import FarmerSidebar from '@/app/navigation/farmer/page';
 import { useEffect, useRef, useState } from 'react';
 import {
   getQuantityRangesForCrop,
@@ -352,24 +353,20 @@ export default function FarmerPredictionPage() {
     review: reviewContent,
   }[currentStep];
 
-  if (
+  const sellAdvisorContent = (
     recommendationStatus === 'success' &&
     recommendationResult &&
     submittedInput &&
     recommendationTimestamp
-  ) {
-    return (
-      <SellAdvisorResultScreen
-        key={recommendationTimestamp}
-        result={recommendationResult}
-        submittedInput={submittedInput}
-        recommendationTimestamp={recommendationTimestamp}
-        onStartNew={handleStartNewRecommendation}
-      />
-    );
-  }
-
-  return (
+  ) ? (
+    <SellAdvisorResultScreen
+      key={recommendationTimestamp}
+      result={recommendationResult}
+      submittedInput={submittedInput}
+      recommendationTimestamp={recommendationTimestamp}
+      onStartNew={handleStartNewRecommendation}
+    />
+  ) : (
     <SellAdvisorShell
       currentStepId={currentStep}
       draft={draft}
@@ -382,5 +379,12 @@ export default function FarmerPredictionPage() {
         {stepContent}
       </div>
     </SellAdvisorShell>
+  );
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-slate-50 lg:flex-row">
+      <FarmerSidebar user={{ name: 'Farmer' }} />
+      {sellAdvisorContent}
+    </div>
   );
 }

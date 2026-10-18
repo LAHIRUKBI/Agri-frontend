@@ -249,10 +249,6 @@ export default function RotationPlanPage() {
   return (
     <div className="flex min-h-screen bg-stone-50" style={{ zoom: 1.1 }}>
       <FarmerSidebar user={user} />
-      {/* 
-        වෙනස: මෙහි max-w-5xl යන්න ඉවත් කර max-w-7xl ලෙස විශාල කර ඇත.
-        මෙමගින් අන්තර්ගතය තිරයේ පුළුල්ව විහිදේ.
-      */}
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="mx-auto max-w-7xl space-y-6">
 
@@ -299,9 +295,6 @@ export default function RotationPlanPage() {
             </div>
           )}
 
-          {/* 
-            වෙනස: Form එක සහ දත්ත ඇතුලත් කිරීමේ කොටස් තිරයේ පළල අනුව විහිදෙන ලෙස සකසා ඇත
-          */}
           <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[1fr,1.5fr]">
             
             {/* 1. Target Crop Section */}
